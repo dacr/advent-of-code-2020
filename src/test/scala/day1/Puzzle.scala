@@ -8,7 +8,7 @@ object PuzzleDay1 {
   def solve1(input:Iterable[String]):Long = {
     input
       .map(_.toInt)
-      .toList
+      .to(List)
       .combinations(2)
       .filter(_.sum == 2020)
       .to(LazyList)
@@ -20,7 +20,7 @@ object PuzzleDay1 {
   def solve2(input:Iterable[String]):Long = {
     input
       .map(_.toInt)
-      .toList
+      .to(List)
       .combinations(3)
       .filter(_.sum == 2020)
       .to(LazyList)
