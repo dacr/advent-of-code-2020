@@ -23,7 +23,7 @@ object PuzzleDay3 {
     val width = land.head.length
     val (x, y) = (0, 0)
     val (xv, yv) = increments
-    land
+    land // TODO - IN FACT probably not the best solution from understandability point of view
       .foldLeft((0, 0, 0L)) {
         case ((xc, yc, count), row) if yc % yv != 0 => (xc, yc + 1, count)
         case ((xc, yc, count), row) if row(xc % width) == '#'  => (xc + xv, yc + 1, count + 1)
