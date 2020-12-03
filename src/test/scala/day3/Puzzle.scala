@@ -1,3 +1,5 @@
+package day3
+
 import helpers._
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should
