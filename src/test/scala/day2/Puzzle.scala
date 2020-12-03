@@ -4,7 +4,7 @@ import helpers._
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should
 
-object Puzzle {
+object PuzzleDay2 {
 
   def checkPolicy(policy:String, password:String): Boolean = {
     val Array(range, chars) = policy.split(" ", 2)
@@ -40,8 +40,8 @@ object Puzzle {
 
 }
 
-class PuzzleTest extends AnyFlatSpec with should.Matchers with Helpers {
-  import Puzzle._
+class PuzzleDay2Test extends AnyFlatSpec with should.Matchers with Helpers {
+  import PuzzleDay2._
 
   // ------------------------------------------------------------------------------------
 

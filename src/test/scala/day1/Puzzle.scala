@@ -4,7 +4,7 @@ import helpers._
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should
 
-object Puzzle {
+object PuzzleDay1 {
   def solve1(input:Iterable[String]):Long = {
     input
       .map(_.toInt)
@@ -31,8 +31,8 @@ object Puzzle {
 
 }
 
-class PuzzleTest extends AnyFlatSpec with should.Matchers with Helpers {
-  import Puzzle._
+class PuzzleDay1Test extends AnyFlatSpec with should.Matchers with Helpers {
+  import PuzzleDay1._
 
   // ------------------------------------------------------------------------------------
 
