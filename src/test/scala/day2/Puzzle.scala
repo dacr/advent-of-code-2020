@@ -16,9 +16,7 @@ object PuzzleDay2 {
 
   def solve1(input:Iterable[String]):Int = {
     input
-      .map(_.split(":",2).map(_.trim))
-      .filter{case Array(policy, password) => checkPolicy(policy, password)}
-      .size
+      .map(_.split(":", 2).map(_.trim)).count { case Array(policy, password) => checkPolicy(policy, password) }
   }
 
   // -------------------------------------------------------------------------
@@ -33,9 +31,7 @@ object PuzzleDay2 {
 
   def solve2(input:Iterable[String]):Int = {
     input
-      .map(_.split(":",2).map(_.trim))
-      .filter{case Array(policy, password) => checkPolicy2(policy, password)}
-      .size
+      .map(_.split(":", 2).map(_.trim)).count { case Array(policy, password) => checkPolicy2(policy, password) }
   }
 
 }

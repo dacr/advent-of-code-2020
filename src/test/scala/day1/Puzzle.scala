@@ -13,7 +13,7 @@ object PuzzleDay1 {
       .filter(_.sum == 2020)
       .to(LazyList)
       .headOption
-      .map{_.reduce(_ * _)}
+      .map{_.product}
       .get
   }
 
@@ -25,7 +25,7 @@ object PuzzleDay1 {
       .filter(_.sum == 2020)
       .to(LazyList)
       .headOption
-      .map{_.reduce(_ * _)}
+      .map{_.product}
       .get
   }
 

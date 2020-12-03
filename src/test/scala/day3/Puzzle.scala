@@ -12,11 +12,11 @@ object PuzzleDay3 {
     val (x, y) = (0, 0)
     val (xv, yv) = (3, 1)
     land
-      .foldLeft((0, 0, 0)) {
-        case ((xc, yc, count), row) if (row(xc % width) == '#') => (xc + xv, yc + yv, count + 1)
-        case ((xc, yc, count), row) => (xc + xv, yc + yv, count)
+      .foldLeft((x, y, 0)) {
+        case ((xc, yc, count), row) if row(xc % width) == '#' => (xc + xv, yc + yv, count + 1)
+        case ((xc, yc, count), _) => (xc + xv, yc + yv, count)
       } match {
-      case (xc, yc, count) => count
+      case (_, _, count) => count
     }
   }
 
@@ -26,12 +26,12 @@ object PuzzleDay3 {
     val (x, y) = (0, 0)
     val (xv, yv) = increments
     land // TODO - IN FACT probably not the best solution from understandability point of view
-      .foldLeft((0, 0, 0L)) {
-        case ((xc, yc, count), row) if yc % yv != 0 => (xc, yc + 1, count)
+      .foldLeft((x, y, 0L)) {
+        case ((xc, yc, count), _) if yc % yv != 0 => (xc, yc + 1, count)
         case ((xc, yc, count), row) if row(xc % width) == '#'  => (xc + xv, yc + 1, count + 1)
-        case ((xc, yc, count), row) => (xc + xv, yc + 1, count)
+        case ((xc, yc, count), _) => (xc + xv, yc + 1, count)
       } match {
-      case (xc, yc, count) => count
+      case (_, _, count) => count
     }
   }
 
@@ -44,7 +44,7 @@ object PuzzleDay3 {
       (7, 1),
       (1, 2)
     )
-    slopes.map(countSlope(land)).reduce(_ * _)
+    slopes.map(countSlope(land)).product
   }
 }
 
