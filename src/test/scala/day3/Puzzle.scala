@@ -55,22 +55,22 @@ class PuzzleDay3Test extends AnyFlatSpec with should.Matchers with Helpers {
   // ------------------------------------------------------------------------------------
 
   "puzzle star#1 example" should "give the right result on the example" in {
-    solve1(resourceContent("day3/input-example-1.txt")) shouldBe 7
+    solve1(resourceContentLines("day3/input-example-1.txt")) shouldBe 7
   }
 
   it should "give the right answer on the given file" in {
-    solve1(resourceContent("day3/input-given-1.txt")) shouldBe 276
+    solve1(resourceContentLines("day3/input-given-1.txt")) shouldBe 276
   }
 
   // ------------------------------------------------------------------------------------
 
   "puzzle star#2 example" should "give the right result on the example" in {
-    solve2(resourceContent("day3/input-example-1.txt")) shouldBe 336
+    solve2(resourceContentLines("day3/input-example-1.txt")) shouldBe 336
   }
 
   it should "give the right answer on the given file" in {
-    solve2(resourceContent("day3/input-given-1.txt")) should not be 21114000000L
-    solve2(resourceContent("day3/input-given-1.txt")) shouldBe 7812180000L
+    solve2(resourceContentLines("day3/input-given-1.txt")) should not be 21114000000L
+    solve2(resourceContentLines("day3/input-given-1.txt")) shouldBe 7812180000L
   }
 
 }

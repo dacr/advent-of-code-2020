@@ -109,19 +109,19 @@ class PuzzleDay4Test extends AnyFlatSpec with should.Matchers with Helpers {
 
   "puzzle star#1 example" should "give the right result on the example" in {
     import PuzzleDay4.Part1._
-    solve(rawResourceContent("day4/input-example-1.txt")) shouldBe 2
+    solve(resourceContent("day4/input-example-1.txt")) shouldBe 2
   }
 
   it should "give the right answer on the given file" in {
     import PuzzleDay4.Part1._
-    solve(rawResourceContent("day4/input-given-1.txt")) shouldBe 202
+    solve(resourceContent("day4/input-given-1.txt")) shouldBe 202
   }
 
   // ------------------------------------------------------------------------------------
 
   "puzzle star#2 example" should "give the right result on the example" in {
     import PuzzleDay4.Part2._
-    solve(rawResourceContent("day4/input-example-1.txt")) shouldBe 2
+    solve(resourceContent("day4/input-example-1.txt")) shouldBe 2
   }
 
   it should "give the right answer on the given file" in {
@@ -144,9 +144,9 @@ class PuzzleDay4Test extends AnyFlatSpec with should.Matchers with Helpers {
     requirements("pid")("123456789") shouldBe true
     requirements("pid")("12345678") shouldBe false
     requirements("pid")("1234567890") shouldBe false
-    solve(rawResourceContent("day4/input-given-1.txt")) should not be 101
-    solve(rawResourceContent("day4/input-given-1.txt")) should not be 188
-    solve(rawResourceContent("day4/input-given-1.txt")) shouldBe 137
+    solve(resourceContent("day4/input-given-1.txt")) should not be 101
+    solve(resourceContent("day4/input-given-1.txt")) should not be 188
+    solve(resourceContent("day4/input-given-1.txt")) shouldBe 137
   }
 
 }

@@ -37,21 +37,21 @@ class PuzzleDay1Test extends AnyFlatSpec with should.Matchers with Helpers {
   // ------------------------------------------------------------------------------------
 
   "puzzle star#1 example" should "give the right result on the example" in {
-    solve1(resourceContent("day1/input-example-1.txt")) shouldBe 514579
+    solve1(resourceContentLines("day1/input-example-1.txt")) shouldBe 514579
   }
 
   it should "give the right answer on the given file" in {
-    solve1(resourceContent("day1/input-given-1.txt")) shouldBe 902451
+    solve1(resourceContentLines("day1/input-given-1.txt")) shouldBe 902451
   }
 
   // ------------------------------------------------------------------------------------
 
   "puzzle star#2 example" should "give the right result on the example" in {
-    solve2(resourceContent("day1/input-example-1.txt")) shouldBe 241861950
+    solve2(resourceContentLines("day1/input-example-1.txt")) shouldBe 241861950
   }
 
   it should "give the right answer on the given file" in {
-    solve2(resourceContent("day1/input-given-1.txt")) shouldBe 85555470
+    solve2(resourceContentLines("day1/input-given-1.txt")) shouldBe 85555470
   }
 
 }

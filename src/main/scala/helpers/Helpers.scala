@@ -5,22 +5,24 @@ import scala.io.Source
 
 trait Helpers {
 
-  def fileContent(filename:String):Iterable[String] = {
-    Source.fromFile(filename).getLines.to(Iterable).map(_.trim).filter(_.nonEmpty)
+  def fileContentLines(filename: String): Iterable[String] = {
+    Source.fromFile(filename).getLines.to(Iterable)
   }
-  def rawFileContent(filename:String):String = {
+
+  def fileContent(filename: String): String = {
     Source.fromFile(filename).getLines.to(Iterable).mkString("\n")
   }
 
-  def resourceContent(filename:String):Iterable[String] = {
-    Source.fromResource(filename).getLines.to(Iterable).map(_.trim).filter(_.nonEmpty)
+  def resourceContentLines(filename: String): Iterable[String] = {
+    Source.fromResource(filename).getLines.to(Iterable)
   }
-  def rawResourceContent(filename:String):String = {
+
+  def resourceContent(filename: String): String = {
     Source.fromResource(filename).getLines.to(Iterable).mkString("\n")
   }
 
-  def stringContent(content: String):Iterable[String] = {
-    content.split("\n").toList.map(_.trim).filter(_.nonEmpty)
+  def stringContentLines(content: String): Iterable[String] = {
+    content.split("\n").toList
   }
 
 }
