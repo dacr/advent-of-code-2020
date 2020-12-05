@@ -1,4 +1,5 @@
 package day5
+// SOLVED IN 45mn
 
 import helpers._
 import org.scalatest.flatspec.AnyFlatSpec
@@ -43,7 +44,7 @@ object PuzzleDay5 {
       val col=decodeCol(cols)
       (row,col)
     }
-    def seatToId(pos:(Int,Int)) = {
+    def seatToId(pos:(Int,Int)): Int = {
       pos match {case (r,c) => r*8+c}
     }
 
@@ -59,15 +60,18 @@ object PuzzleDay5 {
 
   object Part2 {
     import Part1._
-    def aloneSeats(input:Iterable[String]):List[Int] = {
+    def aloneSeats(input:Iterable[String]):Set[Int] = {
       val allSeatsId = 0.to(127*8+7).toSet
       val occupiedSeatsId = input.map(decode).map(seatToId).toSet
-      (allSeatsId -- occupiedSeatsId).toList.sorted
+      (allSeatsId -- occupiedSeatsId)
     }
     def solve2(input: Iterable[String]): Int =  {
       val candidates = aloneSeats(input)
-      // remove all entries which have seats +1 or -1
-      42
+      // remove all entries which have seats +1 or -1 (got the right response thanks to a println / debug of candidates content ;) )
+      candidates
+        .filterNot(v => candidates.contains(v-1))
+        .filterNot(v => candidates.contains(v+1))
+        .headOption.getOrElse(-1)
     }
   }
 }

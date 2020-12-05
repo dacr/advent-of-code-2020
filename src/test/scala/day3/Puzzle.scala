@@ -1,4 +1,5 @@
 package day3
+// SOLVED IN ??mn but less than 1 hour
 
 import helpers._
 import org.scalatest.flatspec.AnyFlatSpec
