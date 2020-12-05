@@ -1,4 +1,5 @@
 package day1
+// SOLVED IN ??mn but very quickly a few minutes
 
 import helpers._
 import org.scalatest.flatspec.AnyFlatSpec
