@@ -40,7 +40,7 @@ class PuzzleDay6Test extends AnyFlatSpec with should.Matchers with Helpers {
   }
   it should "give the right result on the input file" in {
     import PuzzleDay6.Part1._
-    solve(resourceContent("day6/input-given-1.txt")) should not be 7166
+    solve(resourceContent("day6/input-given-1.txt")) should not be 7166 // because I forgot to remove some new lines
     solve(resourceContent("day6/input-given-1.txt")) shouldBe 6683
   }
 
