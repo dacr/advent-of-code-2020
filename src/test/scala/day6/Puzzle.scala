@@ -12,8 +12,10 @@ object PuzzleDay6 {
   object Part1 {
 
     def solve(input: String): Int = {
-      val groups = input.split("\n\n")
-      groups.map(_.filterNot(_ == '\n').distinct.length).sum
+      input
+        .split("\n\n")
+        .map(_.filterNot(_ == '\n').distinct.length)
+        .sum
     }
   }
 
@@ -21,9 +23,11 @@ object PuzzleDay6 {
 
   object Part2 {
     def solve(input: String): Int =  {
-      val groups = input.split("\n\n")
-      val groupsPeople = groups.map(_.split("\n").toList)
-      groupsPeople.map(_.reduce(_ intersect _).length).sum
+      input
+        .split("\n\n")
+        .map(_.split("\n").toList)
+        .map(_.reduce(_ intersect _).length)
+        .sum
     }
   }
 }
