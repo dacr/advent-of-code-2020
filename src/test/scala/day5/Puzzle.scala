@@ -11,42 +11,23 @@ object PuzzleDay5 {
 
   object Part1 {
 
-    def decodeRow(rows:String):Int = {
-      @tailrec
-      def worker(remaining:List[Char], low:Int,up:Int):Int = {
-        remaining match {
-          case ch::Nil if ch=='F' => math.min(low,up)
-          case ch::Nil if ch=='B' => math.max(low,up)
-          case ch::tail if ch=='F' => worker(tail, low, low+(up-low)/2)
-          case ch::tail if ch=='B' => worker(tail, low+(up-low)/2+1, up)
-        }
+    def input2pos(input:String, lowLimit:Int, lowChar:Char, upLimit:Int, upChar:Int):Int = {
+      input.foldLeft( (lowLimit,upLimit) ) {
+        case ( (low,up), ch) if ch == lowChar => (low, low+(up-low)/2)
+        case ( (low,up), ch) if ch == upChar => (low+(up-low)/2+1, up)
+      } match {
+        case (low, up) if input.last == lowChar => math.min(low,up)
+        case (low, up) if input.last == upChar => math.max(low,up)
       }
-      worker(rows.to(List), 0, 127)
     }
 
-    def decodeCol(cols:String):Int = {
-      @tailrec
-      def worker(remaining:List[Char], left:Int, right:Int):Int = {
-        remaining match {
-          case ch::Nil if ch=='R' => math.max(left,right)
-          case ch::Nil if ch=='L' => math.min(left,right)
-          case ch::tail if ch=='L' => worker(tail, left, left+(right-left)/2)
-          case ch::tail if ch=='R' => worker(tail, left+(right-left)/2+1, right)
-        }
-      }
-      worker(cols.to(List), 0, 7)
-    }
+    def decodeRow(rows:String):Int = input2pos(rows, 0, 'F', 127, 'B')
 
-    def decode(input:String):(Int,Int) = {
-      val rows=input.take(7)
-      val cols=input.drop(7)
-      val row=decodeRow(rows)
-      val col=decodeCol(cols)
-      (row,col)
-    }
-    def seatToId(pos:(Int,Int)): Int = {
-      pos match {case (r,c) => r*8+c}
-    }
+    def decodeCol(cols:String):Int = input2pos(cols, 0, 'L', 7, 'R')
+
+    def decode(input:String):(Int,Int) = (decodeRow(input.take(7)), decodeCol(input.drop(7)))
+
+    def seatToId(pos:(Int,Int)): Int = pos match {case (r,c) => r*8+c}
 
     def solve(input: Iterable[String]): Int = {
       input
