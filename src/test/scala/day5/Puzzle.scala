@@ -63,7 +63,7 @@ object PuzzleDay5 {
     def aloneSeats(input:Iterable[String]):Set[Int] = {
       val allSeatsId = 0.to(127*8+7).toSet
       val occupiedSeatsId = input.map(decode).map(seatToId).toSet
-      (allSeatsId -- occupiedSeatsId)
+      allSeatsId -- occupiedSeatsId
     }
     def solve2(input: Iterable[String]): Int =  {
       val candidates = aloneSeats(input)
