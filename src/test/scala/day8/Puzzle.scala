@@ -1,6 +1,6 @@
 package day8
 
-// SOLVED IN 1h15m !!
+// SOLVED IN 1h15m !! And then greatly refactored after while
 
 import helpers._
 import org.scalatest.flatspec.AnyFlatSpec
