@@ -12,35 +12,60 @@ object PuzzleDay8 {
 
   object Part1 {
 
-    case class State(accumulator:Int, pointer:Int, history:List[Int]=Nil)
-
-    val instrRE="""(\w+) ([+-]\d+)""".r
     sealed trait Instr {
       def value:Int
-      def exec(state:State):State
     }
-    case class Nop(value:Int) extends Instr {
-      override def exec(state:State):State =
-        state.copy(
-          pointer = state.pointer + 1,
-          history=state.pointer::state.history
-        )
+    case class Nop(value:Int) extends Instr
+    case class Acc(value:Int) extends Instr
+    case class Jmp(value:Int) extends Instr
+
+    sealed trait RunState
+    object Aborted extends RunState
+    object Runnable extends RunState
+    object Finished extends RunState
+
+
+    case class RunContext(
+      instructions:Array[Instr],
+      accumulator:Int=0,
+      pointer:Int=0,
+      history:List[Int]=Nil
+    ) {
+      def step():RunContext = {
+          instructions(pointer) match {
+            case Nop(_) =>
+              copy(
+                pointer = pointer + 1,
+                history=pointer::history,
+              )
+            case Acc(value) =>
+              copy(
+                pointer = pointer + 1,
+                history=pointer::history,
+                accumulator = accumulator + value,
+              )
+            case Jmp(value) =>
+              copy(
+                pointer = pointer + value,
+                history = pointer :: history,
+              )
+          }
+      }
+
+      def state():RunState = {
+        if (history.contains(pointer)) Aborted
+        else if (pointer == instructions.length) Finished
+        else Runnable
+      }
+
+      def run():RunContext = {
+        if (state()==Runnable) step().run() else this
+      }
     }
-    case class Acc(value:Int) extends Instr {
-      override def exec(state:State):State =
-        state.copy(
-          accumulator = state.accumulator + value,
-          pointer = state.pointer + 1,
-          history=state.pointer::state.history
-        )
-    }
-    case class Jmp(value:Int) extends Instr {
-      override def exec(state:State):State =
-        state.copy(
-          pointer = state.pointer + value,
-          history=state.pointer::state.history
-        )
-    }
+
+    // ----------------------------------------------------------------------------------------------------------
+
+    val instrRE="""(\w+) ([+-]\d+)""".r
 
     def parse(input:String):Array[Instr] = {
       input
@@ -52,31 +77,12 @@ object PuzzleDay8 {
         }
     }
 
-    def executor(instrs: Array[Instr], state: State):(State, String) = {
-      if (state.pointer >= instrs.length) (state, "aborted")
-      else {
-        val newState = instrs(state.pointer).exec(state)
-        val runningState = {
-          if (newState.history.contains(newState.pointer)) "aborted"
-          else if (newState.pointer == instrs.size) "finished"
-          else "running"
-        }
-        (newState, runningState)
-      }
-    }
+    // ----------------------------------------------------------------------------------------------------------
 
 
     def solve(input: String): Int = {
       val instructions = parse(input)
-
-      var state = State(0,0)
-      var continue = true
-      while(continue) {
-        val (newState, runningState) = executor(instructions, state)
-        if (runningState != "running") continue=false
-        else state = newState
-      }
-      state.accumulator
+      RunContext(instructions).run().accumulator
     }
   }
 
@@ -85,48 +91,22 @@ object PuzzleDay8 {
   object Part2 {
     import Part1._
 
-    def testRun(instructions:Array[Instr]):Option[Int] = {
-      var state = State(0,0)
-      var continue = true
-      var result = Option.empty[Int]
-      while(continue) {
-        val (newState, runningState) = executor(instructions, state)
-        if (runningState == "running") state = newState
-        else if (runningState == "aborted") {
-          continue = false
-        } else { // "finished"
-          continue = false
-          result = Some(newState.accumulator)
-        }
-      }
-      result
-    }
-
     def solve2(input: String): Int = {
       val instructions = parse(input)
-      var i = 0
-      var result = 0
-      var continue = true
-      while(continue) { // && i < instructions.length
-        instructions(i) match {
-          case Nop(v) =>
-            testRun(instructions.updated(i, Jmp(v))) match {
-              case Some(found) => result=found ; continue = false
-              case None =>
-            }
-          case Jmp(v) =>
-            testRun(instructions.updated(i, Nop(v))) match {
-              case Some(found) => result=found ; continue = false
-              case None =>
-            }
-          case _ =>
+      instructions
+        .zipWithIndex
+        .to(LazyList)
+        .collect {
+          case (Nop(v), index) => instructions.updated(index, Jmp(v))
+          case (Jmp(v), index) => instructions.updated(index, Nop(v))
         }
-        i+=1
-      }
-      result
+        .map(instructions => RunContext(instructions))
+        .map(_.run())
+        .find(_.state() == Finished)
+        .map(_.accumulator)
+        .getOrElse(-1)
     }
   }
-
 }
 
 // =====================================================================================
