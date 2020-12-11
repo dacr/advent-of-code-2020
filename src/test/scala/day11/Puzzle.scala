@@ -36,12 +36,12 @@ object PuzzleDay11 {
     } yield (x,y)
 
 
-    case class Board(area:Vector[Cell], w:Int, h:Int) {
+    case class Board(area:Vector[Cell], width:Int, height:Int) {
       def occupiedSeats(): Long =
         area.count(_ == OccupiedSeat)
 
       override def toString():String =
-        area.grouped(w).map(_.mkString).mkString("\n")
+        area.grouped(width).map(_.mkString).mkString("\n")
 
 
       def visibleOccupiedAdjacent(x:Int, y:Int):Int = {
@@ -50,7 +50,7 @@ object PuzzleDay11 {
           var xc = x+xv
           var yc = y+yv
           var continue = true
-          while(xc>=0 && yc >=0 && xc < w && yc < h && continue) {
+          while(xc>=0 && yc >=0 && xc < width && yc < height && continue) {
             if (isOccupied(xc,yc)) {
               count+=1
               continue=false
@@ -66,16 +66,16 @@ object PuzzleDay11 {
       def occupiedAdjacent(x:Int, y:Int):Int = {
         adjacents
           .map{case (dx,dy) => (x+dx, y+dy)}
-          .filter{case (x,y) => x>=0 && y>=0 && x<w && y<h }
+          .filter{case (x,y) => x>=0 && y>=0 && x<width && y<height }
           .map(at)
           .count(_ == OccupiedSeat)
       }
-      def at(x:Int,y:Int):Cell = area(y*w+x)
-      def at(pos:(Int,Int)):Cell = pos match {case (x,y) =>area(y*w+x)}
+      def at(x:Int,y:Int):Cell = area(y*width+x)
+      def at(pos:(Int,Int)):Cell = pos match {case (x,y) =>area(y*width+x)}
       def isFree(x:Int, y:Int):Boolean = at(x,y) == Seat
       def isOccupied(x:Int, y:Int):Boolean = at(x,y) == OccupiedSeat
-      def leave(x:Int,y:Int):Board = Board(area.updated(y*w+x, Seat),w,h)
-      def take(x:Int,y:Int):Board = Board(area.updated(y*w+x, OccupiedSeat),w,h)
+      def leave(x:Int,y:Int):Board = Board(area.updated(y*width+x, Seat),width,height)
+      def take(x:Int,y:Int):Board = Board(area.updated(y*width+x, OccupiedSeat),width,height)
     }
 
     def char2cell(in:Char):Cell = in match {
@@ -86,7 +86,7 @@ object PuzzleDay11 {
 
     def playAll(original:Board):Board = {
       var newBoard = original.copy()
-      positions(newBoard.w, newBoard.h).foreach{case (x,y) =>
+      positions(original.width, original.height).foreach{case (x,y) =>
         if (original.isFree(x,y) && original.occupiedAdjacent(x,y)==0) newBoard = newBoard.take(x,y)
         if (original.isOccupied(x,y) && original.occupiedAdjacent(x,y)>=4) newBoard = newBoard.leave(x,y)
       }
@@ -95,13 +95,11 @@ object PuzzleDay11 {
 
     def solve(input: Iterable[String]): Long = {
       val area = input.map(_.map(char2cell).toArray).toVector
-      val w = area.head.size
-      val h = area.size
+      val (w, h) = (area.head.size, area.size)
       var board = Board(area.flatten,w,h)
       var continue = true
       do {
         val newBoard = playAll(board)
-        //println(newBoard+"\n")
         if (newBoard == board) continue = false
         board = newBoard
       } while(continue)
@@ -116,10 +114,7 @@ object PuzzleDay11 {
 
     def playAll2(original:Board):Board = {
       var newBoard = original.copy()
-      for {
-        y <- 0 until original.h
-        x <- 0 until original.w
-      } {
+      positions(original.width, original.height).foreach { case (x,y) =>
         if (original.isFree(x,y) && original.visibleOccupiedAdjacent(x,y)==0) newBoard = newBoard.take(x,y)
         if (original.isOccupied(x,y) && original.visibleOccupiedAdjacent(x,y)>=5) newBoard = newBoard.leave(x,y)
       }
@@ -128,8 +123,7 @@ object PuzzleDay11 {
 
     def solve2(input: Iterable[String]): Long = {
       val area = input.map(_.map(char2cell)).toVector
-      val w = area.head.size
-      val h = area.size
+      val (w, h) = (area.head.size, area.size)
       var board = Board(area.flatten,w,h)
       var continue = true
       do {
