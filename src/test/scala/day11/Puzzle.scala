@@ -37,31 +37,14 @@ object PuzzleDay11 {
 
 
     case class Board(area:Vector[Cell], width:Int, height:Int) {
-      def occupiedSeats(): Long =
-        area.count(_ == OccupiedSeat)
-
-      override def toString():String =
-        area.grouped(width).map(_.mkString).mkString("\n")
-
-
-      def visibleOccupiedAdjacent(x:Int, y:Int):Int = {
-        var count = 0
-        adjacents.foreach { case (xv, yv) =>
-          var xc = x+xv
-          var yc = y+yv
-          var continue = true
-          while(xc>=0 && yc >=0 && xc < width && yc < height && continue) {
-            if (isOccupied(xc,yc)) {
-              count+=1
-              continue=false
-            }
-            if (isFree(xc,yc)) continue = false
-            xc += xv
-            yc += yv
-          }
-        }
-        count
-      }
+      override def toString():String = area.grouped(width).map(_.mkString).mkString("\n")
+      def at(x:Int,y:Int):Cell = area(y*width+x)
+      def at(pos:(Int,Int)):Cell = pos match {case (x,y) =>area(y*width+x)}
+      def isFree(x:Int, y:Int):Boolean = at(x,y) == Seat
+      def isOccupied(x:Int, y:Int):Boolean = at(x,y) == OccupiedSeat
+      def leave(x:Int,y:Int):Board = Board(area.updated(y*width+x, Seat),width,height)
+      def take(x:Int,y:Int):Board = Board(area.updated(y*width+x, OccupiedSeat),width,height)
+      def occupiedSeats(): Long = area.count(_ == OccupiedSeat)
 
       def occupiedAdjacent(x:Int, y:Int):Int = {
         adjacents
@@ -70,12 +53,17 @@ object PuzzleDay11 {
           .map(at)
           .count(_ == OccupiedSeat)
       }
-      def at(x:Int,y:Int):Cell = area(y*width+x)
-      def at(pos:(Int,Int)):Cell = pos match {case (x,y) =>area(y*width+x)}
-      def isFree(x:Int, y:Int):Boolean = at(x,y) == Seat
-      def isOccupied(x:Int, y:Int):Boolean = at(x,y) == OccupiedSeat
-      def leave(x:Int,y:Int):Board = Board(area.updated(y*width+x, Seat),width,height)
-      def take(x:Int,y:Int):Board = Board(area.updated(y*width+x, OccupiedSeat),width,height)
+
+      def visibleOccupiedAdjacent(x:Int, y:Int):Int = {
+        adjacents.count { case (xv, yv) =>
+          LazyList
+            .iterate( (x+xv, y+yv) ) {case (xc,yc) => (xc+xv,yc+yv)}
+            .takeWhile{case (xc, yc) => xc>=0 && yc >=0 && xc < width && yc < height && !isFree(xc,yc)}
+            .find{case (xc, yc) => isOccupied(xc, yc)}
+            .isDefined
+        }
+      }
+
     }
 
     def char2cell(in:Char):Cell = in match {
@@ -85,12 +73,11 @@ object PuzzleDay11 {
     }
 
     def playAll(original:Board):Board = {
-      var newBoard = original.copy()
-      positions(original.width, original.height).foreach{case (x,y) =>
-        if (original.isFree(x,y) && original.occupiedAdjacent(x,y)==0) newBoard = newBoard.take(x,y)
-        if (original.isOccupied(x,y) && original.occupiedAdjacent(x,y)>=4) newBoard = newBoard.leave(x,y)
+      positions(original.width, original.height).foldLeft(original){case (board, (x,y)) =>
+        if (original.isFree(x,y) && original.occupiedAdjacent(x,y)==0) board.take(x,y)
+        else if (original.isOccupied(x,y) && original.occupiedAdjacent(x,y)>=4) board.leave(x,y)
+        else board
       }
-      newBoard
     }
 
     def solve(input: Iterable[String]): Long = {
@@ -110,12 +97,11 @@ object PuzzleDay11 {
     import Part1._
 
     def playAll2(original:Board):Board = {
-      var newBoard = original.copy()
-      positions(original.width, original.height).foreach { case (x,y) =>
-        if (original.isFree(x,y) && original.visibleOccupiedAdjacent(x,y)==0) newBoard = newBoard.take(x,y)
-        if (original.isOccupied(x,y) && original.visibleOccupiedAdjacent(x,y)>=5) newBoard = newBoard.leave(x,y)
+      positions(original.width, original.height).foldLeft(original) { case (board, (x,y)) =>
+        if (original.isFree(x,y) && original.visibleOccupiedAdjacent(x,y)==0) board.take(x,y)
+        else if (original.isOccupied(x,y) && original.visibleOccupiedAdjacent(x,y)>=5) board.leave(x,y)
+        else board
       }
-      newBoard
     }
 
     def solve2(input: Iterable[String]): Long = {
