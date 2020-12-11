@@ -96,14 +96,11 @@ object PuzzleDay11 {
     def solve(input: Iterable[String]): Long = {
       val area = input.map(_.map(char2cell).toArray).toVector
       val (w, h) = (area.head.size, area.size)
-      var board = Board(area.flatten,w,h)
-      var continue = true
-      do {
-        val newBoard = playAll(board)
-        if (newBoard == board) continue = false
-        board = newBoard
-      } while(continue)
-      board.occupiedSeats()
+      LazyList
+        .iterate(Board(area.flatten,w,h))(playAll)
+        .sliding(2)
+        .collect{case LazyList(a,b) if a==b => a.occupiedSeats()}
+        .next()
     }
   }
 
@@ -124,16 +121,12 @@ object PuzzleDay11 {
     def solve2(input: Iterable[String]): Long = {
       val area = input.map(_.map(char2cell)).toVector
       val (w, h) = (area.head.size, area.size)
-      var board = Board(area.flatten,w,h)
-      var continue = true
-      do {
-        val newBoard = playAll2(board)
-        if (newBoard == board) continue = false
-        board = newBoard
-      } while(continue)
-      board.occupiedSeats()
+      LazyList
+        .iterate(Board(area.flatten,w,h))(playAll2)
+        .sliding(2)
+        .collect{case LazyList(a,b) if a==b => a.occupiedSeats() }
+        .next()
     }
-
   }
 
 }
