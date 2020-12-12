@@ -24,8 +24,12 @@ object PuzzleDay10 {
 
   object Part2 {
 
-    def fact(num: Int): BigDecimal = {
-      (1 to num).map(x => BigDecimal.valueOf(x)).foldLeft(BigDecimal.valueOf(1)) ((a,b) => a * b)
+    def fact(num: Int): BigInt = {
+      LazyList
+        .from(1)
+        .take(num)
+        .map(x => BigInt(x))
+        .foldLeft(BigInt(1)) {case (a,b) => a * b}
     }
 
     // TODO - TO BE REVIEWED AS I FOUND IT in an empirical manner !!!! Thanks to unit tests !
