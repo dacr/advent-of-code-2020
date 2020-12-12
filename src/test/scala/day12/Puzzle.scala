@@ -22,11 +22,11 @@ object PuzzleDay12 {
     val rotLeft = rotRight.map{case (k,v)=> v->k}
 
     def rotateLeft(from: Char, angle: Int): Char = {
-      Array.iterate(from, 1 + angle / 90)(rotLeft).last
+      LazyList.iterate(from, 1 + angle / 90)(rotLeft).last
     }
 
     def rotateRight(from: Char, angle: Int): Char = {
-      Array.iterate(from, 1 + angle / 90)(rotRight).last
+      LazyList.iterate(from, 1 + angle / 90)(rotRight).last
     }
 
     def solve(input: Iterable[String]): Long = {
