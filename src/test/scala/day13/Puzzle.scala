@@ -49,7 +49,7 @@ object PuzzleDay13 {
       def dump(timestamp:Long):Unit = {
         println("timestamp "+buses.map{case (id,_)=>id}.mkString(" "))
         for {
-          i <- (-maxBusIdPos to ( maxPosWithConstraint-maxBusIdPos ))
+          i <- (0 to ( maxPosWithConstraint ))
           t = timestamp + i
         } println(s"$t "+buses.map{case (id,pos) => t % id == 0L}.map{case true => "D" case _ => "."}.mkString(" "))
       }
@@ -90,9 +90,17 @@ class PuzzleDay13Test extends AnyFlatSpec with should.Matchers with Helpers {
     import PuzzleDay13.Part2._
     solve(resourceContentLines("day13/input-example-1.txt"),0L) shouldBe 1068781L
   }
-  it should "give the right result on the example again;)" in {
+  it should "give the right result on a very simple example#1)" in {
     import PuzzleDay13.Part2._
-    solve("7,13,x,x,59,x,31,19") shouldBe 1068781L
+    solve("3,5") shouldBe 9L
+  }
+  it should "give the right result on a very simple example#2)" in {
+    import PuzzleDay13.Part2._
+    solve("3,x,7") shouldBe 12L
+  }
+  it should "give the right result on a very simple example#3)" in {
+    import PuzzleDay13.Part2._
+    solve("3,5,7") shouldBe 54L
   }
   it should "give the right on the other given examples" in {
     import PuzzleDay13.Part2._
@@ -103,7 +111,7 @@ class PuzzleDay13Test extends AnyFlatSpec with should.Matchers with Helpers {
     solve("67,7,x,59,61") shouldBe 1261476L
     solve("1789,37,47,1889") shouldBe 1202161486L
   }
-  it should "give the right result on the input file" in {
+  it should "give the right result on the input file" ignore {
     import PuzzleDay13.Part2._
     solve(resourceContentLines("day13/input-given-1.txt"), 100_000_000_000_000L) shouldBe -1L
   }
