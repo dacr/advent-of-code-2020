@@ -43,69 +43,43 @@ object PuzzleDay13 {
   object Part2 {
 
     def solve(input: Iterable[String], startFrom: Long): Long = {
-      solve(input.tail.head)
+      solve(input.tail.head, startFrom)
     }
 
-    def solve(input: String): Long = {
+
+    def solve(input: String, startFrom:Long=0L): Long = {
       val buses =
         input
           .split(",")
           .zipWithIndex
-          .collect { case (busId, i) if busId != "x" => busId.toInt -> i }
+          .collect { case (busId, i) if busId != "x" => busId.toLong -> i.toLong }
 
       val (maxBusId, maxBusIdPos) = buses.maxBy { case (busId, _) => busId }
       val otherBuses = buses.filterNot { case (busId, _) => busId == maxBusId }
 
       def check(v: Long): Boolean = {
         val t = v - maxBusIdPos
-        if (t % 1_000_000_000 == 0L) println(t)
         otherBuses.forall { case (id, pos) =>
           (t + pos) % id == 0L
         }
       }
 
-      LazyList
-        .from(1)
-        .map(_ * maxBusId.toLong)
-        .find(check)
-        .headOption
-        .map(t => t - maxBusIdPos)
-        .get
-    }
+//      LazyList
+//        .from(1)
+//        .map(_ * maxBusId.toLong)
+//        .find(check)
+//        .headOption
+//        .map(t => t - maxBusIdPos)
+//        .get
 
-    def solveBRUT(input: String, startFrom: Long = 0L): Long = {
-      val buses =
-        input
-          .split(",")
-          .zipWithIndex
-          .collect { case (busId, i) if busId != "x" => busId.toInt -> i }
-
-      val (maxBusId, maxBusIdPos) = buses.maxBy { case (busId, _) => busId }
-      val otherBuses = buses.filterNot { case (busId, _) => busId == maxBusId }
-      val maxPosWithConstraint = buses.map { case (_, pos) => pos }.max
-
-      def check(t: Long): Boolean = {
-        if (t % 10_000_000_000L == 0) println(t)
-        otherBuses.forall { case (id, pos) => (t - maxBusIdPos + pos) % id == 0L }
+      // 100000000000000L
+      //  99999999999762L
+      @tailrec
+      def worker(timestamp:Long):Long = {
+        if (check(timestamp)) timestamp
+        else worker(timestamp+maxBusId)
       }
-
-      def dump(timestamp: Long): Unit = {
-        println("timestamp " + buses.map { case (id, _) => id }.mkString(" "))
-        for {
-          i <- 0 to maxPosWithConstraint
-          t = timestamp + i
-        } println(s"$t " + buses.map { case (id, pos) => t % id == 0L }.map { case true => "D" case _ => "." }.mkString(" "))
-      }
-
-      val result =
-        LazyList
-          .iterate(startFrom / maxBusId * maxBusId)(_ + maxBusId)
-          .find(check)
-          .headOption
-          .map(t => t - maxBusIdPos)
-          .get
-      dump(result)
-      result
+      worker(startFrom/maxBusId*maxBusId) - maxBusIdPos
     }
 
   }
@@ -148,12 +122,13 @@ class PuzzleDay13Test extends AnyFlatSpec with should.Matchers with Helpers {
   it should "give the right on the other given examples" in {
     import PuzzleDay13.Part2._
     solve("17,x,13,19") shouldBe 3417L
+    solve("17,x,13,19",3000L) shouldBe 3417L
     solve("67,7,59,61") shouldBe 754018L
     solve("67,x,7,59,61") shouldBe 779210L
     solve("67,7,x,59,61") shouldBe 1261476L
-    solve("1789,37,47,1889") shouldBe 1202161486L
+    solve("1789,37,47,1889") shouldBe 1_202_161_486L
   }
-  it should "give the right result on the input file" ignore {
+  it should "give the right result on the input file" ignore { // ignored because brute force implementation...
     import PuzzleDay13.Part2._
     solve(resourceContentLines("day13/input-given-1.txt"), 100_000_000_000_000L) shouldBe -1L
   }
