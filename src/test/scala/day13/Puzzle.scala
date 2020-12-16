@@ -130,7 +130,7 @@ class PuzzleDay13Test extends AnyFlatSpec with should.Matchers with Helpers {
   }
   it should "give the right result on the input file" ignore { // ignored because brute force implementation...
     import PuzzleDay13.Part2._
-    solve(resourceContentLines("day13/input-given-1.txt"), 100_000_000_000_000L) shouldBe -1L
+    solve(resourceContentLines("day13/input-given-1.txt"), 180_000_000_000_000L) shouldBe 266204454441577L
   }
 
 }
