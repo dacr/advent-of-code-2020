@@ -60,6 +60,7 @@ object PuzzleDay17 {
     def solve(input: String): Int = {
       val initialBoard = buildBoard(input)
 
+      @tailrec
       def worker(board: Board, round: Int): Board = {
         if (round == 6) board
         else {
@@ -140,6 +141,7 @@ object PuzzleDay17 {
     def solve(input: String): Int = {
       val initialBoard = buildBoard(input)
 
+      @tailrec
       def worker(board: Board, round: Int): Board = {
         if (round == 6) board
         else {
