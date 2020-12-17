@@ -99,11 +99,7 @@ class PuzzleDay16Test extends AnyFlatSpec with should.Matchers with Helpers {
 
   // ------------------------------------------------------------------------------------
 
-  "puzzle star#2 example" should "give the right result on the example" ignore {
-    import PuzzleDay16.Part2._
-    solve(resourceContent("day16/input-example-1.txt")) shouldBe -1
-  }
-  it should "give the right result on the input file" in {
+  "puzzle star#2 example" should "give the right result on the example" in {
     import PuzzleDay16.Part2._
     solve(resourceContent("day16/input-given-1.txt")) should not be 36581
     solve(resourceContent("day16/input-given-1.txt")) shouldBe 21095351239483L

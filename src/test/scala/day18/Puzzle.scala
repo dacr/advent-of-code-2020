@@ -1,6 +1,6 @@
 package day18
 
-// solved in 45mn !
+// solved in XXmn
 
 import helpers._
 import org.scalatest.flatspec.AnyFlatSpec
@@ -13,13 +13,12 @@ object PuzzleDay18 {
 
 
   object Part1 {
-
     def solve(input: String): Int = ???
+  }
 
   // -------------------------------------------------------------------------
 
   object Part2 {
-
     def solve(input: String): Int = ???
   }
 
