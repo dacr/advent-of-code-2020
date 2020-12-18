@@ -1,6 +1,7 @@
 package day13
 
-// SOLVED quickly first - UNSOLVED THE second PART - LEFT AS IS
+// SOLVED quickly first - SOLVED USING BRUTE FORCE FOR THE second PART
+// TODO : https://fr.wikipedia.org/wiki/Th%C3%A9or%C3%A8me_des_restes_chinois#Algorithme
 
 import helpers._
 import org.scalatest.flatspec.AnyFlatSpec
