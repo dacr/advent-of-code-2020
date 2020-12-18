@@ -113,71 +113,68 @@ object PuzzleDay18 {
   object Part2 {
 
     def evaluate(expr: Expr): BigInt = {
-      def reduceParAdds(expr: Expr): Expr = {
-        expr match {
-          case Nil => Nil
-          case ParOpen :: Num(a) :: AddOp :: Num(b) :: ParClose :: remain => Num(a + b) ::remain
-          case ParOpen :: Num(v) :: ParClose :: remain => Num(v) ::remain
-          case head :: tail => head :: reduceParAdds(tail)
-        }
+      def reducePar(expr: Expr): Expr = expr match {
+        case Nil => Nil
+        case ParOpen :: Num(v) :: ParClose :: remain => Num(v) :: remain
+        case head :: tail => head :: reducePar(tail)
       }
 
-      def reduceParMuls(expr: Expr): Expr = {
-        expr match {
-          case Nil => Nil
-          case ParOpen :: Num(a) :: MulOp :: Num(b) :: ParClose :: remain => Num(a * b) :: remain
-          case ParOpen :: Num(v) :: ParClose :: remain => Num(v) :: remain
-          case head :: tail => head :: reduceParMuls(tail)
-        }
+      def reduceParAdds(expr: Expr): Expr = expr match {
+        case Nil => Nil
+        case ParOpen :: Num(a) :: AddOp :: Num(b) :: ParClose :: remain => Num(a + b) :: remain
+        case head :: tail => head :: reduceParAdds(tail)
       }
 
-      def reduceAdds(expr: Expr): Expr = {
-        expr match {
-          case Nil => Nil
-          case Num(a) :: AddOp :: Num(b) :: remain => Num(a + b) :: remain
-          case ParOpen :: Num(v) :: ParClose :: remain => Num(v) :: remain
-          case head :: tail => head :: reduceAdds(tail)
-        }
+      def reduceParMuls(expr: Expr): Expr = expr match {
+        case Nil => Nil
+        case ParOpen :: Num(a) :: MulOp :: Num(b) :: ParClose :: remain => Num(a * b) :: remain
+        case head :: tail => head :: reduceParMuls(tail)
       }
 
-      def reduceMuls(expr: Expr): Expr = {
-        expr match {
-          case Nil => Nil
-          case Num(a) :: MulOp :: Num(b) :: remain => Num(a * b) :: remain
-          case ParOpen :: Num(v) :: ParClose :: remain => Num(v) :: remain
-          case head :: tail => head :: reduceMuls(tail)
-        }
+      def reduceAdds(expr: Expr): Expr = expr match {
+        case Nil => Nil
+        case Num(a) :: AddOp :: Num(b) :: remain => Num(a + b) :: remain
+        case head :: tail => head :: reduceAdds(tail)
+      }
+
+      def reduceMuls(expr: Expr): Expr = expr match {
+        case Nil => Nil
+        case Num(a) :: MulOp :: Num(b) :: remain => Num(a * b) :: remain
+        case head :: tail => head :: reduceMuls(tail)
       }
 
       @tailrec
       def reduce(expr: Expr): BigInt = {
-        println(expr.mkString)
-        reduceParAdds(expr) match {
+        //println(expr.mkString)
+        reducePar(expr) match {
           case newExpr if newExpr != expr => reduce(newExpr)
-          case Num(v) :: Nil => v
-          case otherwise =>
-            reduceAdds(expr) match {
+          case _ =>
+            reduceParAdds(expr) match {
               case newExpr if newExpr != expr => reduce(newExpr)
-              case Num(v) :: Nil => v
-              case otherwise =>
-                reduceParMuls(expr) match {
+              case _ =>
+                reduceAdds(expr) match {
                   case newExpr if newExpr != expr => reduce(newExpr)
-                  case Num(v) :: Nil => v
-                  case otherwise =>
-                    reduceMuls(expr) match {
+                  case _ =>
+                    reduceParMuls(expr) match {
                       case newExpr if newExpr != expr => reduce(newExpr)
-                      case Num(v) :: Nil => v
+                      case _ =>
+                        reduceMuls(expr) match {
+                          case newExpr if newExpr != expr => reduce(newExpr)
+                          case Num(v) :: Nil => v
+                        }
                     }
                 }
             }
         }
       }
+
       reduce(expr)
     }
 
     def solve(input: String): BigInt = {
       input.split("\n").map(_.replaceAll("\\s+", "")).map(v => tokenize(v)).map(evaluate).sum
     }
+
     def solve2(input: String): BigInt = {
       val lines = input.split("\n").map(_.replaceAll("\\s+", ""))
       evaluate(tokenize(lines.mkString("+")))
@@ -243,12 +240,12 @@ class PuzzleDay18Test extends AnyFlatSpec with should.Matchers with Helpers {
 
     solve("2 + (5 * 7)") shouldBe 37
     solve("(2 + 5 ) * 7") shouldBe 49
-    solve("3 * (2 + 5) * 7") shouldBe 21*7
+    solve("3 * (2 + 5) * 7") shouldBe 21 * 7
 
-    solve("3 * (2 + (2 + 3)) * 7") shouldBe 21*7
-    solve("3 * (2 + (2 * 3)) * 7") shouldBe 24*7
-    solve("(3) * (2 + (2 * 3)) * 7") shouldBe 24*7
-    solve("(3 * (2 + (2 * 3)) * 7)") shouldBe 24*7
+    solve("3 * (2 + (2 + 3)) * 7") shouldBe 21 * 7
+    solve("3 * (2 + (2 * 3)) * 7") shouldBe 24 * 7
+    solve("(3) * (2 + (2 * 3)) * 7") shouldBe 24 * 7
+    solve("(3 * (2 + (2 * 3)) * 7)") shouldBe 24 * 7
 
     solve("(2 + ( 2 + ( 2 + (2 * 3))))") shouldBe 12
     solve("((((2 * 3) + 2) + 2) + 2)") shouldBe 12
