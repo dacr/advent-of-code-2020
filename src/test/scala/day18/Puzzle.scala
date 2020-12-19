@@ -13,22 +13,18 @@ object PuzzleDay18 {
 
   sealed trait Token
 
-  case class Num(v: BigInt) extends Token {
+  case class Num(v: Long) extends Token {
     override def toString: String = v.toString
   }
 
-  trait Op extends Token {
-    def op(a: BigInt, b: BigInt): BigInt
-  }
-
-  object AddOp extends Op {
-    def op(a: BigInt, b: BigInt): BigInt = a + b
+  object AddOp extends Token {
+    def op(a: Long, b: Long): Long = a + b
 
     override def toString: String = "+"
   }
 
-  object MulOp extends Op {
-    def op(a: BigInt, b: BigInt): BigInt = a * b
+  object MulOp extends Token {
+    def op(a: Long, b: Long): Long = a * b
 
     override def toString: String = "*"
   }
@@ -49,10 +45,11 @@ object PuzzleDay18 {
   val OpenToken = """[(](.*)""".r
   val CloseToken = """[)](.*)""".r
 
+  @tailrec
   def tokenize(input: String, accu: Expr = Nil): Expr = {
     input match {
       case "" => accu
-      case NumToken(vs, remain) => tokenize(remain, accu :+ Num(BigInt(vs)))
+      case NumToken(vs, remain) => tokenize(remain, accu :+ Num(vs.toLong))
       case AddToken(remain) => tokenize(remain, accu :+ AddOp)
       case MulToken(remain) => tokenize(remain, accu :+ MulOp)
       case OpenToken(remain) => tokenize(remain, accu :+ ParOpen)
@@ -79,9 +76,9 @@ object PuzzleDay18 {
       (expr.take(closingParIndex - 1), remainExpr)
     }
 
-    def evaluate(expr: Expr): Option[BigInt] = {
+    def evaluate(expr: Expr): Option[Long] = {
       //println("---------- " ,expr.mkString)
-      def worker(expr: Expr, accu: Option[BigInt]): Option[BigInt] = {
+      def worker(expr: Expr, accu: Option[Long]): Option[Long] = {
         //println(accu, " => " ,expr.mkString)
         expr match {
           case Nil => accu
@@ -103,7 +100,7 @@ object PuzzleDay18 {
       worker(expr, None)
     }
 
-    def solve(input: String): BigInt = {
+    def solve(input: String): Long = {
       input.split("\n").map(_.replaceAll("\\s+", "")).map(v => tokenize(v)).flatMap(evaluate).sum
     }
   }
@@ -112,50 +109,50 @@ object PuzzleDay18 {
 
   object Part2 {
 
-    def evaluate(expr: Expr): BigInt = {
-      def reducePar(expr: Expr): Expr = expr match {
-        case Nil => Nil
-        case ParOpen :: Num(v) :: ParClose :: remain => Num(v) :: remain
-        case head :: tail => head :: reducePar(tail)
-      }
+    def reducePar(expr: Expr): Expr = expr match {
+      case Nil => Nil
+      case ParOpen :: Num(v) :: ParClose :: remain => Num(v) :: remain
+      case head :: tail => head :: reducePar(tail)
+    }
 
-      def reduceParAdds(expr: Expr): Expr = expr match {
-        case Nil => Nil
-        case ParOpen :: Num(a) :: AddOp :: Num(b) :: ParClose :: remain => Num(a + b) :: remain
-        case head :: tail => head :: reduceParAdds(tail)
-      }
+    def reduceParAdds(expr: Expr): Expr = expr match {
+      case Nil => Nil
+      case ParOpen :: Num(a) :: AddOp :: Num(b) :: ParClose :: remain => Num(a + b) :: remain
+      case head :: tail => head :: reduceParAdds(tail)
+    }
 
-      def reduceParMuls(expr: Expr): Expr = expr match {
-        case Nil => Nil
-        case ParOpen :: Num(a) :: MulOp :: Num(b) :: ParClose :: remain => Num(a * b) :: remain
-        case head :: tail => head :: reduceParMuls(tail)
-      }
+    def reduceParMuls(expr: Expr): Expr = expr match {
+      case Nil => Nil
+      case ParOpen :: Num(a) :: MulOp :: Num(b) :: ParClose :: remain => Num(a * b) :: remain
+      case head :: tail => head :: reduceParMuls(tail)
+    }
 
-      def reduceAdds(expr: Expr): Expr = expr match {
-        case Nil => Nil
-        case Num(a) :: AddOp :: Num(b) :: remain => Num(a + b) :: remain
-        case head :: tail => head :: reduceAdds(tail)
-      }
+    def reduceAdds(expr: Expr): Expr = expr match {
+      case Nil => Nil
+      case Num(a) :: AddOp :: Num(b) :: remain => Num(a + b) :: remain
+      case head :: tail => head :: reduceAdds(tail)
+    }
 
-      def reduceMuls(expr: Expr): Expr = expr match {
-        case Nil => Nil
-        case Num(a) :: MulOp :: Num(b) :: remain => Num(a * b) :: remain
-        case head :: tail => head :: reduceMuls(tail)
-      }
+    def reduceMuls(expr: Expr): Expr = expr match {
+      case Nil => Nil
+      case Num(a) :: MulOp :: Num(b) :: remain => Num(a * b) :: remain
+      case head :: tail => head :: reduceMuls(tail)
+    }
 
+    def evaluate(expr: Expr): Long = {
       @tailrec
-      def reduce(expr: Expr): BigInt = {
-        //println(expr.mkString)
+      def reduce(expr: Expr): Long = {
+        println(expr.mkString)
         reducePar(expr) match {
           case newExpr if newExpr != expr => reduce(newExpr)
           case _ =>
             reduceParAdds(expr) match {
               case newExpr if newExpr != expr => reduce(newExpr)
               case _ =>
-                reduceAdds(expr) match {
+                reduceParMuls(expr) match {
                   case newExpr if newExpr != expr => reduce(newExpr)
                   case _ =>
-                    reduceParMuls(expr) match {
+                    reduceAdds(expr) match {
                       case newExpr if newExpr != expr => reduce(newExpr)
                       case _ =>
                         reduceMuls(expr) match {
@@ -171,14 +168,40 @@ object PuzzleDay18 {
       reduce(expr)
     }
 
-    def solve(input: String): BigInt = {
-      input.split("\n").map(_.replaceAll("\\s+", "")).map(v => tokenize(v)).map(evaluate).sum
+    def solve(input: String): Long = {
+      val exprs =
+        input
+          .split("\n")
+          .map(_.replaceAll("\\s+", ""))
+          .map(v => tokenize(v))
+      val results = exprs.map(evaluate)
+      //println(exprs.zip(results).sortBy{case (_,result)=>result}.map{case (expr,result)=> ""+result+" = "+expr.mkString}.mkString("\n"))
+      results.sum
     }
 
-    def solve2(input: String): BigInt = {
-      val lines = input.split("\n").map(_.replaceAll("\\s+", ""))
-      evaluate(tokenize(lines.mkString("+")))
+    // -------------------------------------
+    // This time using a true AST
+/*
+    type AST = Nothing
+    // switch to an abstract tree
+    def treenize(expr:Expr):AST = {
+      ???
     }
+
+    def evaluateAST(ast:AST):Long = {
+      ???
+    }
+
+    def solveAlt(input:String): Long = {
+        input
+          .split("\n")
+          .map(_.replaceAll("\\s+", ""))
+          .map(v => tokenize(v))
+          .map(treenize)
+          .map(evaluateAST)
+          .sum
+    }
+*/
   }
 
 }
@@ -242,6 +265,9 @@ class PuzzleDay18Test extends AnyFlatSpec with should.Matchers with Helpers {
     solve("(2 + 5 ) * 7") shouldBe 49
     solve("3 * (2 + 5) * 7") shouldBe 21 * 7
 
+    solve("2 + 3 * 4 + 5") shouldBe solve("(2 + 3) * (4 + 5)")
+    solve("2 * 3 + 4 * 5") shouldBe solve("2 * (3 + 4) * 5")
+
     solve("3 * (2 + (2 + 3)) * 7") shouldBe 21 * 7
     solve("3 * (2 + (2 * 3)) * 7") shouldBe 24 * 7
     solve("(3) * (2 + (2 * 3)) * 7") shouldBe 24 * 7
@@ -283,6 +309,52 @@ class PuzzleDay18Test extends AnyFlatSpec with should.Matchers with Helpers {
     import PuzzleDay18.Part2._
     solve("(1 + 2 + 3) * ((2 * 3 + 2) + 1)") shouldBe 66
   }
+  it should "work on basic example#5" in {
+    import PuzzleDay18.Part2._
+    solve("1 + 1 + 1 + 1 + 1 * 2 * 2 * 2 * 2 * 2") shouldBe 160
+  }
+  it should "work on basic example#6" in {
+    import PuzzleDay18.Part2._
+    solve("1 * 1 * 1 * 1 * 1 + 2 + 2 + 2 + 2 + 2") shouldBe 11
+  }
+  it should "work on basic example#7" in {
+    import PuzzleDay18.Part2._
+    solve("( 3 * 3 ) + (2 + 2 + 2 + 2 + 2)") shouldBe 19
+  }
+  it should "work on basic example#8" in {
+    import PuzzleDay18.Part2._
+    solve("( 3 + 3 ) * (2 + 2)") shouldBe 24
+  }
+  it should "work on basic example#9" in {
+    import PuzzleDay18.Part2._
+    solve("((2 + 4 * 9) * (6 + 9 * 8 + 6) + 6) + 2 + 4 * 2") shouldBe 23340
+    solve("((2 + 4 * 9) * (6 + 9 * 8 + 6) + 6) + 2 + 4 * 2") shouldBe
+      solve("((((2 + 4) * 9) * ((6 + 9) * (8 + 6)) + 6) + (2 + 4)) * 2")
+  }
+  it should "work on basic example#10" in {
+    import PuzzleDay18.Part2._
+    solve("(((2 + 4 * 9) * (6 + 9 * 8 + 6) + 6) + 2 + 4 * 2)+(((2 + 4 * 9) * (6 + 9 * 8 + 6) + 6) + 2 + 4 * 2)") shouldBe 23340 * 2
+    solve("(((2 + 4 * 9) * (6 + 9 * 8 + 6) + 6) + 2 + 4 * 2)*(((2 + 4 * 9) * (6 + 9 * 8 + 6) + 6) + 2 + 4 * 2)") shouldBe 23340 * 23340
+  }
+  it should "work on basic example#11" in {
+    import PuzzleDay18.Part2._
+    solve("3 + (4 + 8 + 3 + 4 + 7 + 6) + 4 + 3 * 4 + ((5 * 6) + 2 * 5 * 2 + 8 * 3)") shouldBe 4968
+  }
+  it should "work on basic example#12" in {
+    import PuzzleDay18.Part2._
+    solve("6*(2+4*8*7*4*(7*4*9*3+9))*(6*7+7*6*8+5)*3*8*(7+2*2*4)") shouldBe
+      solve("6*((2+4)*8*7*4*(7*4*9*(3+9)))*(6*(7+7)*6*(8+5))*3*8*((7+2)*2*4)")
+  }
+  it should "work on basic example#13" in {
+    import PuzzleDay18.Part2._
+    solve("1+2\n1+2\n2+(3*4)") shouldBe 20
+    solve("1+2\n1+2\n2+(3*4)\n") shouldBe 20
+    solve("1+2\n1+2\n2+(3*4)\n") shouldBe 20
+  }
+  it should "work on basic example#14" in {
+    import PuzzleDay18.Part2._
+    solve("3*1604460*2+(27*4*7*9*48)+36") shouldBe ((2L+27*4*7*9*48)+36)*3*1604460*2
+  }
 
   it should "give the right result on the input file" in {
     import PuzzleDay18.Part2._
@@ -290,11 +362,14 @@ class PuzzleDay18Test extends AnyFlatSpec with should.Matchers with Helpers {
     solve(resourceContent("day18/input-given-1.txt")) should not be 27132530028608L + 3348222486398L
     solve(resourceContent("day18/input-given-1.txt")) should not be 27132530028608L * 2
     solve(resourceContent("day18/input-given-1.txt")) should not be 28055119131161L
-    solve(resourceContent("day18/input-given-1.txt")) shouldBe 28055119131161L
+    solve(resourceContent("day18/input-given-1.txt")) shouldBe -1L
   }
-  it should "give the addup solutions" in {
+  it should "give the right result on an other input file#2" in {
     import PuzzleDay18.Part2._
-    solve2(resourceContent("day18/input-given-1.txt")) shouldBe 1L
+    solve(resourceContent("day18/input-given-2.txt")) shouldBe 297139939002972L
   }
-
+  it should "give the right result on an other input file#3" in {
+    import PuzzleDay18.Part2._
+    solve(resourceContent("day18/input-given-3.txt")) shouldBe 20394514442037L
+  }
 }
