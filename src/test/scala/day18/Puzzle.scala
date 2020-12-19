@@ -57,24 +57,24 @@ object PuzzleDay18 {
     }
   }
 
+  def decompose(expr: Expr): (Expr, Expr) = {
+    var parCount = 1
+    var closingParIndex = 0
+    var remainExpr = expr
+    while (parCount > 0 && remainExpr.nonEmpty) {
+      remainExpr.head match {
+        case ParOpen => parCount += 1
+        case ParClose => parCount -= 1
+        case _ =>
+      }
+      remainExpr = remainExpr.tail
+      closingParIndex += 1
+    }
+    (expr.take(closingParIndex - 1), remainExpr)
+  }
+
 
   object Part1 {
-
-    def decompose(expr: Expr): (Expr, Expr) = {
-      var parCount = 1
-      var closingParIndex = 0
-      var remainExpr = expr
-      while (parCount > 0 && remainExpr.nonEmpty) {
-        remainExpr.head match {
-          case ParOpen => parCount += 1
-          case ParClose => parCount -= 1
-          case _ =>
-        }
-        remainExpr = remainExpr.tail
-        closingParIndex += 1
-      }
-      (expr.take(closingParIndex - 1), remainExpr)
-    }
 
     def evaluate(expr: Expr): Option[Long] = {
       //println("---------- " ,expr.mkString)
@@ -112,19 +112,10 @@ object PuzzleDay18 {
     def reducePar(expr: Expr): Expr = expr match {
       case Nil => Nil
       case ParOpen :: Num(v) :: ParClose :: remain => Num(v) :: remain
+      case ParOpen :: remain =>
+        val (left, right) = decompose(remain)
+        reduce(left):::right
       case head :: tail => head :: reducePar(tail)
-    }
-
-    def reduceParAdds(expr: Expr): Expr = expr match {
-      case Nil => Nil
-      case ParOpen :: Num(a) :: AddOp :: Num(b) :: ParClose :: remain => Num(a + b) :: remain
-      case head :: tail => head :: reduceParAdds(tail)
-    }
-
-    def reduceParMuls(expr: Expr): Expr = expr match {
-      case Nil => Nil
-      case ParOpen :: Num(a) :: MulOp :: Num(b) :: ParClose :: remain => Num(a * b) :: remain
-      case head :: tail => head :: reduceParMuls(tail)
     }
 
     def reduceAdds(expr: Expr): Expr = expr match {
@@ -139,33 +130,28 @@ object PuzzleDay18 {
       case head :: tail => head :: reduceMuls(tail)
     }
 
-    def evaluate(expr: Expr): Long = {
-      @tailrec
-      def reduce(expr: Expr): Long = {
-        println(expr.mkString)
-        reducePar(expr) match {
-          case newExpr if newExpr != expr => reduce(newExpr)
-          case _ =>
-            reduceParAdds(expr) match {
-              case newExpr if newExpr != expr => reduce(newExpr)
-              case _ =>
-                reduceParMuls(expr) match {
-                  case newExpr if newExpr != expr => reduce(newExpr)
-                  case _ =>
-                    reduceAdds(expr) match {
-                      case newExpr if newExpr != expr => reduce(newExpr)
-                      case _ =>
-                        reduceMuls(expr) match {
-                          case newExpr if newExpr != expr => reduce(newExpr)
-                          case Num(v) :: Nil => v
-                        }
-                    }
-                }
-            }
-        }
+    @tailrec
+    def reduce(expr: Expr): Expr = {
+      //println(expr.mkString)
+      reducePar(expr) match {
+        case newExpr if newExpr != expr => reduce(newExpr)
+        case _ =>
+          reduceAdds(expr) match {
+            case newExpr if newExpr != expr => reduce(newExpr)
+            case _ =>
+              reduceMuls(expr) match {
+                case newExpr if newExpr != expr => reduce(newExpr)
+                case v => v
+              }
+          }
       }
+    }
 
-      reduce(expr)
+
+    def evaluate(expr: Expr): Long = {
+      reduce(expr) match {
+        case Num(v) :: Nil => v
+      }
     }
 
     def solve(input: String): Long = {
@@ -179,29 +165,6 @@ object PuzzleDay18 {
       results.sum
     }
 
-    // -------------------------------------
-    // This time using a true AST
-/*
-    type AST = Nothing
-    // switch to an abstract tree
-    def treenize(expr:Expr):AST = {
-      ???
-    }
-
-    def evaluateAST(ast:AST):Long = {
-      ???
-    }
-
-    def solveAlt(input:String): Long = {
-        input
-          .split("\n")
-          .map(_.replaceAll("\\s+", ""))
-          .map(v => tokenize(v))
-          .map(treenize)
-          .map(evaluateAST)
-          .sum
-    }
-*/
   }
 
 }
@@ -338,7 +301,7 @@ class PuzzleDay18Test extends AnyFlatSpec with should.Matchers with Helpers {
   }
   it should "work on basic example#11" in {
     import PuzzleDay18.Part2._
-    solve("3 + (4 + 8 + 3 + 4 + 7 + 6) + 4 + 3 * 4 + ((5 * 6) + 2 * 5 * 2 + 8 * 3)") shouldBe 4968
+    solve("3 + (4 + 8 + 3 + 4 + 7 + 6) + 4 + 3 * 4 + ((5 * 6) + 2 * 5 * 2 + 8 * 3)") shouldBe 201768
   }
   it should "work on basic example#12" in {
     import PuzzleDay18.Part2._
@@ -353,7 +316,8 @@ class PuzzleDay18Test extends AnyFlatSpec with should.Matchers with Helpers {
   }
   it should "work on basic example#14" in {
     import PuzzleDay18.Part2._
-    solve("3*1604460*2+(27*4*7*9*48)+36") shouldBe ((2L+27*4*7*9*48)+36)*3*1604460*2
+    info("first prioritize parenthesis evaluation")
+    solve("3*1604460*2+(27*4*7*9*48)+36") shouldBe (((27L * 4 * 7 * 9 * 48) + 2) + 36) * 3 * 1604460
   }
 
   it should "give the right result on the input file" in {
@@ -362,7 +326,7 @@ class PuzzleDay18Test extends AnyFlatSpec with should.Matchers with Helpers {
     solve(resourceContent("day18/input-given-1.txt")) should not be 27132530028608L + 3348222486398L
     solve(resourceContent("day18/input-given-1.txt")) should not be 27132530028608L * 2
     solve(resourceContent("day18/input-given-1.txt")) should not be 28055119131161L
-    solve(resourceContent("day18/input-given-1.txt")) shouldBe -1L
+    solve(resourceContent("day18/input-given-1.txt")) shouldBe 43423343619505L
   }
   it should "give the right result on an other input file#2" in {
     import PuzzleDay18.Part2._
