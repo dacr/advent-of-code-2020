@@ -80,6 +80,7 @@ object PuzzleDay19 {
 
     def solve(input: String): Long = {
       val (regex, messages) = decode(input)
+      println(regex.pattern.pattern().size)
       messages.count(regex.matches)
     }
   }
