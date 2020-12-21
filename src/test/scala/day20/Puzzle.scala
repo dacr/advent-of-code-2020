@@ -19,6 +19,7 @@ object PuzzleDay20 {
 
   type Cells = List[Int]
   type Tiles = List[Tile]
+  type TileId = Long
 
   def pow2(p: Int): Int = (1 << p)
 
@@ -33,20 +34,53 @@ object PuzzleDay20 {
   def str2bin(in: String): Int = java.lang.Integer.parseInt(in, 2)
 
 
-  def hflip(borders:Borders) = Borders(up = flipBits(borders.up, borders.bitCounts), down = flipBits(borders.down, borders.bitCounts), left = borders.right, right = borders.left, bitCounts = borders.bitCounts)
+  def hflip(borders: Borders) = {
+    Borders(
+      up = flipBits(borders.up, borders.bitCounts),
+      down = flipBits(borders.down, borders.bitCounts),
+      left = borders.right,
+      right = borders.left,
+      encoding = borders.encoding.map(_.reverse),
+      bitCounts = borders.bitCounts
+    )
+  }
 
-  def vflip(borders:Borders) = Borders(up = borders.down, down = borders.up, left = flipBits(borders.left, borders.bitCounts), right = flipBits(borders.right, borders.bitCounts), bitCounts = borders.bitCounts)
+  def vflip(borders: Borders) = {
+    Borders(
+      up = borders.down,
+      down = borders.up,
+      left = flipBits(borders.left, borders.bitCounts),
+      right = flipBits(borders.right, borders.bitCounts),
+      encoding = borders.encoding.reverse,
+      bitCounts = borders.bitCounts
+    )
+  }
 
-  def rotR(borders:Borders) = Borders(up = flipBits(borders.left, borders.bitCounts), down = flipBits(borders.right, borders.bitCounts), left = borders.down, right = borders.up, bitCounts = borders.bitCounts)
+  def rotateEncodingRight(from: Array[String]): Array[String] = {
+    def worker(remaining: Array[String], accu: Array[String]): Array[String] = {
+      if (remaining.head.isEmpty) accu else {
+        worker(remaining.map(_.tail), accu :+ remaining.map(_.head).mkString.reverse)
+      }
+    }
 
-  def rotL(borders:Borders) = Borders(up = borders.right, down = borders.left, left = flipBits(borders.up, borders.bitCounts), right = flipBits(borders.down, borders.bitCounts), bitCounts = borders.bitCounts)
+    worker(from, Array.empty)
+  }
 
-  def rot2(borders:Borders) = Borders(up = flipBits(borders.down, borders.bitCounts), down = flipBits(borders.up, borders.bitCounts), left = flipBits(borders.right, borders.bitCounts), right = flipBits(borders.left, borders.bitCounts), bitCounts = borders.bitCounts)
+  def rotR(borders: Borders) = {
+    Borders(
+      up = flipBits(borders.left,
+        borders.bitCounts),
+      down = flipBits(borders.right, borders.bitCounts),
+      left = borders.down,
+      right = borders.up,
+      encoding = rotateEncodingRight(borders.encoding),
+      bitCounts = borders.bitCounts
+    )
+  }
 
 
-
-  case class Borders(up: Int, down: Int, left: Int, right: Int, bitCounts: Int = 10) {
-    def connectors = Set(up,down,left,right)
+  case class Borders(up: Int, down: Int, left: Int, right: Int, encoding: Array[String], bitCounts: Int = 10) {
+    def connectors = Set(up, down, left, right)
   }
 
   def possibleBordersFrom(borders: Borders): List[Borders] = List(
@@ -54,25 +88,29 @@ object PuzzleDay20 {
     hflip(borders),
     vflip(borders),
     rotR(borders),
-    rotL(borders),
-    rot2(borders)
+    rotR(rotR(rotR(borders))),
+    rotR(rotR(borders))
   )
 
-  case class Tile(id: Long, borders: Borders) {
+  case class Tile(id: TileId, borders: Borders) {
     def connectors: Set[Int] = possibleBordersFrom(borders).flatMap(_.connectors).toSet
   }
 
   def parseTile(input: String, bitCounts: Int = 10): Tile = {
     input.split(":", 2) match {
       case Array(s"Tile $ids", tileSpec) =>
-        val cells =
+        val encoding =
           tileSpec
             .split("\n")
-            .map(_.replaceAll("[#]", "1").replaceAll("[.]", "0").trim)
+            .map(_.trim)
             .filter(_.size > 0)
+
+        val cells =
+          encoding
+            .map(_.replaceAll("[#]", "1").replaceAll("[.]", "0"))
             .map(s => java.lang.Integer.parseInt(s, 2))
             .toList
-        val borders = Borders(up = cells.head, down = cells.last, left = leftBorder(cells), right = rightBorder(cells), bitCounts)
+        val borders = Borders(up = cells.head, down = cells.last, left = leftBorder(cells), right = rightBorder(cells), encoding, bitCounts)
         Tile(ids.toInt, borders)
     }
   }
@@ -86,47 +124,58 @@ object PuzzleDay20 {
       .map(spec => parseTile(spec))
   }
 
-  def tilesGenerator(desc: String): String = {
-    val numeratorStart = 2
-
-    def decodeBigRow(bigRow: String, fromId: Int): List[String] = {
-      def worker(group: Array[List[String]], id: Int, accu: List[String]): List[String] = {
-        if (group.head.isEmpty) accu else {
-          val tile = s"Tile $id:\n" + group.map(_.head).mkString("\n")
-          worker(group.map(_.tail), id + 1, accu :+ tile)
-        }
-      }
-
-      val in = bigRow.split("\n").map(_.split(" ").toList)
-      worker(in, fromId, Nil)
-    }
-
-    val parts = desc.split("\n\n")
-    parts.zipWithIndex.flatMap { case (bigRow, i) => decodeBigRow(bigRow, numeratorStart + i * parts.size) }.mkString("\n\n")
-  }
-
-
   object Part1 {
 
     def solve(input: String): Long = {
       val tiles = parse(input)
       val tilesByConnector =
         tiles
-          .flatMap(t => t.connectors.map(connector => connector->t))
-          .groupMap{case (connector, _) => connector}{case (_,tile)=> tile}
+          .flatMap(t => t.connectors.map(connector => connector -> t))
+          .groupMap { case (connector, _) => connector } { case (_, tile) => tile }
       val tilesConnections =
-        tiles.map{ tile =>
-          tile -> (tile.connectors.flatMap(connector => tilesByConnector.getOrElse(connector,Nil)).map(_.id) - tile.id)
+        tiles.map { tile =>
+          tile -> (tile.connectors.flatMap(connector => tilesByConnector.getOrElse(connector, Nil)).map(_.id) - tile.id)
         }
-      tilesConnections.collect{case (tile, connections) if connections.size==2 => tile.id}.product
+      tilesConnections.collect { case (tile, connections) if connections.size == 2 => tile.id }.product
     }
 
   }
 
-    // -------------------------------------------------------------------------
+  // -------------------------------------------------------------------------
 
   object Part2 {
     def solve(input: String): Long = {
+      val seaMonster =
+        """                  #
+          |#    ##    ##    ###
+          | #  #  #  #  #  #   """.stripMargin
+
+      val tiles = parse(input)
+
+      val tilesByConnector: Map[Int, List[Tile]] =
+        tiles
+          .flatMap(t => t.connectors.map(connector => connector -> t))
+          .groupMap { case (connector, _) => connector } { case (_, tile) => tile }
+
+      val tilesConnections: Seq[(Tile, Set[TileId])] =
+        tiles.map { tile =>
+          tile -> (tile.connectors.flatMap(connector => tilesByConnector.getOrElse(connector, Nil)).map(_.id) - tile.id)
+        }
+
+      val tilesUsedBorders =
+        tiles.map { tile =>
+          val connectors =  tile.connectors.flatMap{connector =>
+            tilesByConnector
+              .getOrElse(connector,Nil)
+              .filterNot(_.id == tile.id)
+              .map(tile => connector ->tile.id)
+          }
+          val borders =
+            possibleBordersFrom(tile.borders)
+              .maxBy(b => b.connectors.intersect(connectors.map{case (connector, _) => connector}).size)
+          println(tile.id+"\n"+borders.encoding.mkString("\n"))
+        }
+
       ???
     }
   }
@@ -136,6 +185,35 @@ object PuzzleDay20 {
 // =====================================================================================
 
 class PuzzleDay20Test extends AnyFlatSpec with should.Matchers with Helpers {
+
+  import PuzzleDay20._
+
+  "basic functions" should "work" in {
+    str2bin("10") shouldBe 2
+    str2bin("100") shouldBe 4
+    bin2str(4, 3) shouldBe "100"
+    bin2str(4, 4) shouldBe "0100"
+    bin2str(flipBits(str2bin("00101"), 5), 5) shouldBe "10100"
+    bin2str(flipBits(str2bin("00001"), 5), 5) shouldBe "10000"
+    bin2str(flipBits(str2bin("10000"), 5), 5) shouldBe "00001"
+    bin2str(flipBits(str2bin("01000"), 5), 5) shouldBe "00010"
+    bin2str(flipBits(str2bin("00100"), 5), 5) shouldBe "00100"
+    flipBits(1, 3) shouldBe 4
+    flipBits(4, 3) shouldBe 1
+    //flipBits(bin2str)
+  }
+
+  "rotatingRight" should "encode in the right way" in {
+    val from =
+      """abc
+        |def
+        |ghj""".stripMargin.split("\n")
+    rotateEncodingRight(from).mkString("\n") shouldBe
+      """gda
+        |heb
+        |jfc""".stripMargin
+  }
+
   // ------------------------------------------------------------------------------------
 
   "puzzle star#1 example" should "give the right result on the example" in {
@@ -150,7 +228,7 @@ class PuzzleDay20Test extends AnyFlatSpec with should.Matchers with Helpers {
 
   "puzzle star#2 example" should "give the right result on the example" ignore {
     import PuzzleDay20.Part2._
-    solve(resourceContent("day20/input-example-1.txt")) shouldBe -1
+    solve(resourceContent("day20/input-example-1.txt")) shouldBe 273
   }
   it should "give the right result on the input file" ignore {
     import PuzzleDay20.Part2._
