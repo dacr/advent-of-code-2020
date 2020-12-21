@@ -23,24 +23,25 @@ object PuzzleDay21 {
       .map { case inputRE(rawIngredients, rawAllergens) => Recipe(rawIngredients.split(" ").toSet, rawAllergens.split(", ").toSet) }
   }
 
+  def computeIngredientWithAllergens(recipes:Array[Recipe], remainingAllergens:Set[Allergen], candidates:Map[Allergen,Ingredient]):Map[Allergen,Ingredient] = {
+    if (remainingAllergens.isEmpty) candidates else {
+      val solved = candidates.values.toSet
+      val reducingCandidates =
+        remainingAllergens.map{allergen =>
+          allergen -> recipes.filter(_.allergens.contains(allergen)).map(_.ingredients.filterNot(solved.contains)).reduce(_ intersect _)
+        }
+      val newCandidates = reducingCandidates.collect { case (allergen, ingredients) if ingredients.size == 1 => allergen -> ingredients.head }.toMap
+      computeIngredientWithAllergens(recipes, remainingAllergens -- candidates.keys,candidates ++ newCandidates)
+    }
+  }
+
   object Part1 {
 
     def solve(input: String): Long = {
       val recipes = parse(input)
       val allergens = recipes.flatMap(_.allergens).toSet
-      def computeIngredientWithAllergens(remainingAllergens:Set[Allergen], candidates:Map[Allergen,Ingredient]):Map[Allergen,Ingredient] = {
-        if (remainingAllergens.isEmpty) candidates else {
-          val solved = candidates.values.toSet
-          val reducingCandidates =
-            remainingAllergens.map{allergen =>
-              allergen -> recipes.filter(_.allergens.contains(allergen)).map(_.ingredients.filterNot(solved.contains)).reduce(_ intersect _)
-            }
-          val newCandidates = reducingCandidates.collect { case (allergen, ingredients) if ingredients.size == 1 => allergen -> ingredients.head }.toMap
-          computeIngredientWithAllergens(remainingAllergens -- candidates.keys,candidates ++ newCandidates)
-        }
-      }
 
-      val ingredientByAllergens = computeIngredientWithAllergens(allergens, Map.empty)
+      val ingredientByAllergens = computeIngredientWithAllergens(recipes, allergens, Map.empty)
       println("ingredientByAllergens : "+ingredientByAllergens)
       val ingredientsWithAllergens = ingredientByAllergens.values.toSet
       val ingredients = recipes.flatMap(_.ingredients).toSet
@@ -59,19 +60,7 @@ object PuzzleDay21 {
     def solve(input: String): String = {
       val recipes = parse(input)
       val allergens = recipes.flatMap(_.allergens).toSet
-      def computeIngredientWithAllergens(remainingAllergens:Set[Allergen], candidates:Map[Allergen,Ingredient]):Map[Allergen,Ingredient] = {
-        if (remainingAllergens.isEmpty) candidates else {
-          val solved = candidates.values.toSet
-          val reducingCandidates =
-            remainingAllergens.map{allergen =>
-              allergen -> recipes.filter(_.allergens.contains(allergen)).map(_.ingredients.filterNot(solved.contains)).reduce(_ intersect _)
-            }
-          val newCandidates = reducingCandidates.collect { case (allergen, ingredients) if ingredients.size == 1 => allergen -> ingredients.head }.toMap
-          computeIngredientWithAllergens(remainingAllergens -- candidates.keys,candidates ++ newCandidates)
-        }
-      }
-
-      val ingredientByAllergens = computeIngredientWithAllergens(allergens, Map.empty)
+      val ingredientByAllergens = computeIngredientWithAllergens(recipes, allergens, Map.empty)
       println("ingredientByAllergens : "+ingredientByAllergens)
       ingredientByAllergens.toList.sortBy{case (a,i) => a}.map{case (a,i) =>i}.mkString(",")
     }
