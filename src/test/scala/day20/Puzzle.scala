@@ -142,41 +142,29 @@ object PuzzleDay20 {
     }
 
     def search(tiles: Tiles, sideSize: Int): Option[Array[Tile]] = {
-      def worker(remainingTiles: Tiles, geoAccu: Map[(Int, Int), Tile]): Option[Array[Tile]] = {
-        remainingTiles match {
-          case Nil =>
-            buildCheckSquare(geoAccu, sideSize)
-          case current :: tail if geoAccu.isEmpty =>
-            val id = current.id
-            val possibleBorders = current.possibleBordersFor.to(Iterator)
-            val results = possibleBorders.flatMap { border =>
-              worker(tail, Map((0, 0) -> Tile(id, border)))
+      def worker(remainingTiles: Set[Tile], geoAccu: Map[(Int, Int), Tile]): Option[Array[Tile]] = {
+        if (remainingTiles.isEmpty) {
+          buildCheckSquare(geoAccu, sideSize)
+        } else {
+          def attachables: Iterable[Option[Array[Tile]]] =
+            for {
+              current <- remainingTiles.to(LazyList)
+              borders <- current.possibleBordersFor        // check with all possible configuration
+              ((x, y), _) <- geoAccu                       // check already attached coords
+              (nx, ny) <- aroundsOf(x, y)                  // positions candidates
+              if !geoAccu.contains((nx, ny))               // check if position candidate is free
+              arounds = aroundsOf(nx, ny)                  // positions around current candidate
+              neighbors = arounds.filter(geoAccu.contains) // neighbors to check border constraints with
+              if neighborhoodIsChecked(nx, ny, borders, neighbors, geoAccu, sideSize)
+            } yield {
+              val attachable = (nx, ny) -> Tile(current.id, borders)
+              worker(remainingTiles - current, geoAccu + attachable)
             }
-            if (results.hasNext) Some(results.next) else None
-          case current :: tail =>
-            val possibleBorders = current.possibleBordersFor
-            val attachables =
-              for {
-                ((x, y), _) <- geoAccu.to(Iterator)          // check already attached coords
-                (nx, ny) <- aroundsOf(x, y)                  // positions candidates
-                if !geoAccu.contains((nx, ny))               // check if position candidate is free
-                arounds = aroundsOf(nx, ny)                  // positions around current candidate
-                neighbors = arounds.filter(geoAccu.contains) // neighbors to check border constraints with
-                borders <- possibleBorders                   // check with all possible configuration
-                if neighborhoodIsChecked(nx, ny, borders, neighbors, geoAccu, sideSize)
-              } yield {
-                (nx, ny) -> Tile(current.id, borders)
-              }
-            val results = attachables.flatMap { attachable =>
-              worker(tail, geoAccu + attachable)
-            }
-            if (results.hasNext) {
-              Some(results.next())
-            } else worker(tail:+current, geoAccu)
+          attachables.collect {case Some(solution) => solution}.headOption
         }
       }
 
-      val found = worker(tiles, Map.empty)
+      val found = worker(tiles.tail.toSet, Map((0,0)->tiles.head))
       found
     }
 
