@@ -13,6 +13,8 @@ import scala.math._
 import scala.annotation.tailrec
 import scala.util.matching.Regex
 
+import scala.collection.parallel.CollectionConverters._
+
 object PuzzleDay20 {
 
   type Cells = List[Int]
@@ -27,11 +29,12 @@ object PuzzleDay20 {
   def flipBits(in: Int, bitsCount: Int = 10): Int = (0 until bitsCount).foldLeft(0) { case (out, n) => out | (((in & pow2(n)) >> n) << (bitsCount - 1 - n)) }
 
   def bin2str(n: Int, bitsCount: Int): String = s"%${bitsCount}s".format(n.toBinaryString).replaceAll(" ", "0").takeRight(bitsCount)
-  def str2bin(in:String):Int = java.lang.Integer.parseInt(in, 2)
+
+  def str2bin(in: String): Int = java.lang.Integer.parseInt(in, 2)
 
 
-  case class Borders(up: Int, down: Int, left: Int, right: Int, bitCounts:Int=10) {
-    def hflip = Borders(up = flipBits(up,bitCounts), down = flipBits(down,bitCounts), left = right, right = left, bitCounts = bitCounts)
+  case class Borders(up: Int, down: Int, left: Int, right: Int, bitCounts: Int = 10) {
+    def hflip = Borders(up = flipBits(up, bitCounts), down = flipBits(down, bitCounts), left = right, right = left, bitCounts = bitCounts)
 
     def vflip = Borders(up = down, down = up, left = flipBits(left, bitCounts), right = flipBits(right, bitCounts), bitCounts = bitCounts)
 
@@ -42,18 +45,18 @@ object PuzzleDay20 {
     def rot2 = Borders(up = flipBits(down, bitCounts), down = flipBits(up, bitCounts), left = flipBits(right, bitCounts), right = flipBits(left, bitCounts), bitCounts = bitCounts)
   }
 
-  case class Tile(id: Long, borders: Borders) {
-    val possibleBordersFor = List(
-      borders,
-      borders.hflip,
-      borders.vflip,
-      borders.rotR,
-      borders.rotL,
-      borders.rot2
-    )
-  }
+  def possibleBordersFrom(borders: Borders): List[Borders] = List(
+    borders,
+    borders.hflip,
+    borders.vflip,
+    borders.rotR,
+    borders.rotL,
+    borders.rot2
+  )
 
-  def parseTile(input: String, bitCounts:Int=10): Tile = {
+  case class Tile(id: Long, borders: Borders)
+
+  def parseTile(input: String, bitCounts: Int = 10): Tile = {
     input.split(":", 2) match {
       case Array(s"Tile $ids", tileSpec) =>
         val cells =
@@ -76,6 +79,26 @@ object PuzzleDay20 {
       .filter(_.size > 0)
       .map(spec => parseTile(spec))
   }
+
+  def tilesGenerator(desc: String): String = {
+    val numeratorStart = 2
+
+    def decodeBigRow(bigRow: String, fromId: Int): List[String] = {
+      def worker(group: Array[List[String]], id: Int, accu: List[String]): List[String] = {
+        if (group.head.isEmpty) accu else {
+          val tile = s"Tile $id:\n" + group.map(_.head).mkString("\n")
+          worker(group.map(_.tail), id + 1, accu :+ tile)
+        }
+      }
+
+      val in = bigRow.split("\n").map(_.split(" ").toList)
+      worker(in, fromId, Nil)
+    }
+
+    val parts = desc.split("\n\n")
+    parts.zipWithIndex.flatMap { case (bigRow, i) => decodeBigRow(bigRow, numeratorStart + i * parts.size) }.mkString("\n\n")
+  }
+
 
   object Part1 {
 
@@ -129,42 +152,82 @@ object PuzzleDay20 {
       } else None
     }
 
+    /*
+    var aroundsCache = Map.empty[Int,List[(Int,Int)]]
+    def aroundsOf(x: Int, y: Int): List[(Int, Int)] = {
+      aroundsCache.get(y*100+x) match {
+        case Some(r) => r
+        case None =>
+          val r = incs.map { case (dx, dy) => (x + dx, y + dy) }
+          aroundsCache += (y*100+x) -> r
+          r
+      }
+    }
+     */
+
     val incs = List((1, 0), (-1, 0), (0, 1), (0, -1))
 
     def aroundsOf(x: Int, y: Int): List[(Int, Int)] = {
       incs.map { case (dx, dy) => (x + dx, y + dy) }
     }
 
-    def neighborhoodIsChecked(ax: Int, ay: Int, borders: Borders, neighbors: List[(Int, Int)], geoAccu: Map[(Int, Int), Tile], sideSize:Int) = {
+
+    def neighborhoodIsChecked(ax: Int, ay: Int, borders: Borders, neighbors: List[(Int, Int)], geoAccu: Map[(Int, Int), Tile], sideSize: Int) = {
       neighbors.forall { case (nx, ny) =>
         checkAttachableTiles(ax, ay, borders, nx, ny, geoAccu((nx, ny)).borders)
       }
     }
 
+
     def search(tiles: Tiles, sideSize: Int): Option[Array[Tile]] = {
-      def worker(remainingTiles: Set[Tile], geoAccu: Map[(Int, Int), Tile]): Option[Array[Tile]] = {
+      val possibleBordersById: Map[Long, List[Borders]] = tiles.map(tile => tile.id -> possibleBordersFrom(tile.borders)).toMap
+      //var iter=0
+      def worker(remainingTiles: Set[Tile], geoAccu: Map[(Int, Int), Tile], minx: Int, maxx: Int, miny: Int, maxy: Int): Option[Array[Tile]] = {
+        //iter+=1
+        //if (iter > 40000) {
+        //  println(s"******************** $iter ************************")
+        //  for {y <- miny to maxy} {
+        //    for {x <- minx to maxx} {
+        //      print("%-4s".format(geoAccu.get((x, y)).map(_.id).getOrElse("-")))
+        //      print(" ")
+        //    }
+        //    println()
+        //  }
+        //}
+
         if (remainingTiles.isEmpty) {
-          buildCheckSquare(geoAccu, sideSize)
-        } else {
-          def attachables: Iterable[Option[Array[Tile]]] =
+          //if (maxx-minx == sideSize -1 && maxy-miny == sideSize -1) {
+          val result = {
             for {
-              current <- remainingTiles.to(LazyList)
-              borders <- current.possibleBordersFor        // check with all possible configuration
-              ((x, y), _) <- geoAccu                       // check already attached coords
-              (nx, ny) <- aroundsOf(x, y)                  // positions candidates
-              if !geoAccu.contains((nx, ny))               // check if position candidate is free
-              arounds = aroundsOf(nx, ny)                  // positions around current candidate
+              y <- miny to maxy
+              x <- minx to maxx
+              found = geoAccu((x, y))
+            } yield found
+          }
+          Some(result.toArray)
+          //} else None
+        } else {
+          val solutions: Iterator[Array[Tile]] =
+            for {
+              ((x, y), _) <- geoAccu.to(Iterator) // check already attached coords
+              (nx, ny) <- aroundsOf(x, y) // positions candidates
+              if max(maxx, nx) - min(minx, nx) < sideSize
+              if max(maxy, ny) - min(miny, ny) < sideSize
+              if !geoAccu.contains(nx -> ny) // check if position candidate is free
+              arounds = aroundsOf(nx, ny) // positions around current candidate
               neighbors = arounds.filter(geoAccu.contains) // neighbors to check border constraints with
+              current <- remainingTiles // loop over tiles
+              borders <- possibleBordersById(current.id) // check current tile all possible configuration
               if neighborhoodIsChecked(nx, ny, borders, neighbors, geoAccu, sideSize)
-            } yield {
-              val attachable = (nx, ny) -> Tile(current.id, borders)
-              worker(remainingTiles - current, geoAccu + attachable)
-            }
-          attachables.collect {case Some(solution) => solution}.headOption
+              attachable = (nx -> ny) -> Tile(current.id, borders)
+              solution <- worker(remainingTiles - current, geoAccu + attachable, min(minx, nx), max(maxx, nx), min(miny, ny), max(maxy, ny))
+            } yield solution
+
+          solutions.nextOption // Get first possible
         }
       }
 
-      val found = worker(tiles.tail.toSet, Map((0,0)->tiles.head))
+      val found = worker(tiles.tail.toSet, Map((0, 0) -> tiles.head), 0, 0, 0, 0)
       found
     }
 
@@ -213,47 +276,47 @@ class PuzzleDay20Test extends AnyFlatSpec with should.Matchers with Helpers {
     import PuzzleDay20._
     str2bin("10") shouldBe 2
     str2bin("100") shouldBe 4
-    bin2str(4,3) shouldBe "100"
-    bin2str(4,4) shouldBe "0100"
+    bin2str(4, 3) shouldBe "100"
+    bin2str(4, 4) shouldBe "0100"
     bin2str(flipBits(str2bin("00101"), 5), 5) shouldBe "10100"
     bin2str(flipBits(str2bin("00001"), 5), 5) shouldBe "10000"
     bin2str(flipBits(str2bin("10000"), 5), 5) shouldBe "00001"
     bin2str(flipBits(str2bin("01000"), 5), 5) shouldBe "00010"
     bin2str(flipBits(str2bin("00100"), 5), 5) shouldBe "00100"
-    flipBits(1,3) shouldBe 4
-    flipBits(4,3) shouldBe 1
+    flipBits(1, 3) shouldBe 4
+    flipBits(4, 3) shouldBe 1
     //flipBits(bin2str)
   }
 
   "rotations" should "work" in {
     import PuzzleDay20._
-    val borders = Borders(up=4, right=0, down=0, left=0, bitCounts=3)
-    borders.rotR shouldBe Borders(up=0, right=4, down=0, left=0, bitCounts=3)
-    borders.rotR.rotR shouldBe Borders(up=0, right=0, down=1, left=0, bitCounts=3)
-    borders.rotR.rotR.rotR shouldBe Borders(up=0, right=0, down=0, left=1, bitCounts=3)
+    val borders = Borders(up = 4, right = 0, down = 0, left = 0, bitCounts = 3)
+    borders.rotR shouldBe Borders(up = 0, right = 4, down = 0, left = 0, bitCounts = 3)
+    borders.rotR.rotR shouldBe Borders(up = 0, right = 0, down = 1, left = 0, bitCounts = 3)
+    borders.rotR.rotR.rotR shouldBe Borders(up = 0, right = 0, down = 0, left = 1, bitCounts = 3)
     borders.rotR.rotR.rotR.rotR shouldBe borders
     // ---------------
-    borders.rotL shouldBe Borders(up=0, right=0, down=0, left=1, bitCounts=3)
-    borders.rotL.rotL shouldBe Borders(up=0, right=0, down=1, left=0, bitCounts=3)
-    borders.rotL.rotL.rotL shouldBe Borders(up=0, right=4, down=0, left=0, bitCounts=3)
+    borders.rotL shouldBe Borders(up = 0, right = 0, down = 0, left = 1, bitCounts = 3)
+    borders.rotL.rotL shouldBe Borders(up = 0, right = 0, down = 1, left = 0, bitCounts = 3)
+    borders.rotL.rotL.rotL shouldBe Borders(up = 0, right = 4, down = 0, left = 0, bitCounts = 3)
     borders.rotL.rotL.rotL.rotL shouldBe borders
     // ---------------
-    borders.rot2 shouldBe Borders(up=0, right=0, down=1, left=0, bitCounts=3)
+    borders.rot2 shouldBe Borders(up = 0, right = 0, down = 1, left = 0, bitCounts = 3)
     borders.rot2.rot2 shouldBe borders
   }
 
   "flips" should "work" in {
     import PuzzleDay20._
-    Borders(up=4, right=0, down=0, left=0, bitCounts=3).hflip shouldBe Borders(up=1, right=0, down=0, left=0, bitCounts=3)
-    Borders(up=0, right=0, down=1, left=0, bitCounts=3).hflip shouldBe Borders(up=0, right=0, down=4, left=0, bitCounts=3)
+    Borders(up = 4, right = 0, down = 0, left = 0, bitCounts = 3).hflip shouldBe Borders(up = 1, right = 0, down = 0, left = 0, bitCounts = 3)
+    Borders(up = 0, right = 0, down = 1, left = 0, bitCounts = 3).hflip shouldBe Borders(up = 0, right = 0, down = 4, left = 0, bitCounts = 3)
     // ---------------
-    Borders(up=4, right=0, down=0, left=0, bitCounts=3).vflip shouldBe Borders(up=0, right=0, down=4, left=0, bitCounts=3)
-    Borders(up=0, right=0, down=1, left=0, bitCounts=3).vflip shouldBe Borders(up=1, right=0, down=0, left=0, bitCounts=3)
+    Borders(up = 4, right = 0, down = 0, left = 0, bitCounts = 3).vflip shouldBe Borders(up = 0, right = 0, down = 4, left = 0, bitCounts = 3)
+    Borders(up = 0, right = 0, down = 1, left = 0, bitCounts = 3).vflip shouldBe Borders(up = 1, right = 0, down = 0, left = 0, bitCounts = 3)
     // ---------------
-    Borders(up=1, right=1, down=0, left=0, bitCounts=3).hflip shouldBe Borders(up=4, right=0, down=0, left=1, bitCounts=3)
-    Borders(up=0, right=1, down=1, left=0, bitCounts=3).hflip shouldBe Borders(up=0, right=0, down=4, left=1, bitCounts=3)
-    Borders(up=2, right=1, down=1, left=0, bitCounts=3).hflip shouldBe Borders(up=2, right=0, down=4, left=1, bitCounts=3)
-    Borders(up=3, right=1, down=1, left=0, bitCounts=3).hflip shouldBe Borders(up=6, right=0, down=4, left=1, bitCounts=3)
+    Borders(up = 1, right = 1, down = 0, left = 0, bitCounts = 3).hflip shouldBe Borders(up = 4, right = 0, down = 0, left = 1, bitCounts = 3)
+    Borders(up = 0, right = 1, down = 1, left = 0, bitCounts = 3).hflip shouldBe Borders(up = 0, right = 0, down = 4, left = 1, bitCounts = 3)
+    Borders(up = 2, right = 1, down = 1, left = 0, bitCounts = 3).hflip shouldBe Borders(up = 2, right = 0, down = 4, left = 1, bitCounts = 3)
+    Borders(up = 3, right = 1, down = 1, left = 0, bitCounts = 3).hflip shouldBe Borders(up = 6, right = 0, down = 4, left = 1, bitCounts = 3)
   }
 
   "parsing" should "work" in {
@@ -263,18 +326,18 @@ class PuzzleDay20Test extends AnyFlatSpec with should.Matchers with Helpers {
         |#..
         |#..
         |#..""".stripMargin
-    val t1 = parseTile(t1s,3)
+    val t1 = parseTile(t1s, 3)
     t1.id shouldBe 42
-    t1.borders shouldBe Borders(up=4, right=0, down=4, left=7, bitCounts=3)
+    t1.borders shouldBe Borders(up = 4, right = 0, down = 4, left = 7, bitCounts = 3)
 
     val t2s =
       """Tile 42:
         |#.#
         |#.#
         |#.#""".stripMargin
-    val t2 = parseTile(t2s,3)
+    val t2 = parseTile(t2s, 3)
     t2.id shouldBe 42
-    t2.borders shouldBe Borders(up=5, right=7, down=5, left=7, bitCounts=3)
+    t2.borders shouldBe Borders(up = 5, right = 7, down = 5, left = 7, bitCounts = 3)
 
 
     val t3s =
@@ -282,15 +345,14 @@ class PuzzleDay20Test extends AnyFlatSpec with should.Matchers with Helpers {
         |#.#
         |.##
         |.#.""".stripMargin
-    val t3 = parseTile(t3s,3)
+    val t3 = parseTile(t3s, 3)
     t3.id shouldBe 42
-    t3.borders shouldBe Borders(up=5, right=6, down=2, left=4, bitCounts=3)
-    t3.borders.rotR shouldBe Borders(up=1, right=5, down=3, left=2, bitCounts=3)
-    t3.borders.rotL shouldBe Borders(up=6, right=2, down=4, left=5, bitCounts=3)
-    t3.borders.hflip shouldBe Borders(up=5, right=4, down=2, left=6, bitCounts=3)
-    t3.borders.vflip shouldBe Borders(up=2, right=3, down=5, left=1, bitCounts=3)
+    t3.borders shouldBe Borders(up = 5, right = 6, down = 2, left = 4, bitCounts = 3)
+    t3.borders.rotR shouldBe Borders(up = 1, right = 5, down = 3, left = 2, bitCounts = 3)
+    t3.borders.rotL shouldBe Borders(up = 6, right = 2, down = 4, left = 5, bitCounts = 3)
+    t3.borders.hflip shouldBe Borders(up = 5, right = 4, down = 2, left = 6, bitCounts = 3)
+    t3.borders.vflip shouldBe Borders(up = 2, right = 3, down = 5, left = 1, bitCounts = 3)
   }
-
 
 
   // ------------------------------------------------------------------------------------
@@ -299,18 +361,100 @@ class PuzzleDay20Test extends AnyFlatSpec with should.Matchers with Helpers {
     import PuzzleDay20.Part1._
     solve(resourceContent("day20/input-example-1.txt")).value shouldBe 20899048083289L
   }
-  it should "give the right result on the input file" in {
+  it should "give the right result on the input file" ignore {
     import PuzzleDay20.Part1._
     solve(resourceContent("day20/input-given-1.txt")).value shouldBe -1
   }
 
+  it should "give the right result on a simpler input#0" in {
+    import PuzzleDay20._
+    import PuzzleDay20.Part1._
+    val spec =
+      """.### #..#
+        |.... ...#
+        |#... ....
+        |#..# ##..
+        |
+        |#..# ##..
+        |.... ....
+        |.... ....
+        |###. ....""".stripMargin
+    //  2  3
+    //  4  5
+    val expected = 2 * 3 * 4 * 5
+    val tilesSpec = tilesGenerator(spec)
+    println(tilesSpec)
+    solve(tilesSpec).value shouldBe expected
+  }
+
+
+  it should "give the right result on a simpler input#1" in {
+    import PuzzleDay20._
+    import PuzzleDay20.Part1._
+    val spec =
+      """.### #..# #..#
+        |.... ...# #..#
+        |#... .... ...#
+        |#..# ##.. ....
+        |
+        |#..# ##.. ....
+        |.... .... ....
+        |.... .... ....
+        |###. .... ....
+        |
+        |###. .... ....
+        |...# #... ...#
+        |.... ...# #..#
+        |.### #... ....""".stripMargin
+    //  2  3  4
+    //  5  6  7
+    //  8  9 10
+    val expected = 2 * 4 * 8 * 10
+    val tilesSpec = tilesGenerator(spec)
+    println(tilesSpec)
+    solve(tilesSpec).value shouldBe expected
+  }
+
+  it should "give the right result on a simpler input#2" in {
+    import PuzzleDay20._
+    import PuzzleDay20.Part1._
+    val spec =
+      """.### #..# #..# #...
+        |.... ...# #..# #...
+        |#... .... ...# #...
+        |#..# ##.. .... ...#
+        |
+        |#..# ##.. .... ...#
+        |.... .... .... ....
+        |.... .... .... ....
+        |###. .... .... ....
+        |
+        |###. .... .... ....
+        |...# #... ...# #...
+        |.... ...# #..# #...
+        |.### #... .... ....
+        |
+        |.### #... .... ....
+        |.... ...# #... ....
+        |.... ...# #..# #...
+        |...# #..# #..# #...""".stripMargin
+    //  2  3  4  5
+    //  6  7  8  9
+    // 10 11 12 13
+    // 14 15 16 17
+    val expected = 2 * 5 * 14 * 17
+    val tilesSpec = tilesGenerator(spec)
+    println(tilesSpec)
+    solve(tilesSpec) shouldBe expected
+  }
+
   // ------------------------------------------------------------------------------------
 
-  "puzzle star#2 example" should "give the right result on the example" in {
+  "puzzle star#2 example" should "give the right result on the example" ignore {
     import PuzzleDay20.Part2._
     solve(resourceContent("day20/input-example-1.txt")) shouldBe -1
   }
-  it should "give the right result on the input file" in {
+  it should "give the right result on the input file" ignore {
     import PuzzleDay20.Part2._
     solve(resourceContent("day20/input-given-1.txt")) shouldBe -1
   }
