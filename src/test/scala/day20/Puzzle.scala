@@ -43,7 +43,7 @@ object PuzzleDay20 {
   }
 
   case class Tile(id: Long, borders: Borders) {
-    def possibleBordersFor = LazyList(
+    val possibleBordersFor = List(
       borders,
       borders.hflip,
       borders.vflip,
@@ -129,17 +129,6 @@ object PuzzleDay20 {
       } else None
     }
 
-    def geoMapIsValid(geoAccu: Map[(Int, Int), Tile], sideSize: Int): Boolean = {
-      if (geoAccu.isEmpty) true else {
-        lazy val minx = geoAccu.keys.map { case (x, _) => x }.min
-        lazy val miny = geoAccu.keys.map { case (_, y) => y }.min
-        lazy val maxx = geoAccu.keys.map { case (x, _) => x }.max
-        lazy val maxy = geoAccu.keys.map { case (_, y) => y }.max
-
-        maxx - minx < sideSize && maxy - miny < sideSize
-      }
-    }
-
     val incs = List((1, 0), (-1, 0), (0, 1), (0, -1))
 
     def aroundsOf(x: Int, y: Int): List[(Int, Int)] = {
@@ -155,23 +144,20 @@ object PuzzleDay20 {
     def search(tiles: Tiles, sideSize: Int): Option[Array[Tile]] = {
       def worker(remainingTiles: Tiles, geoAccu: Map[(Int, Int), Tile]): Option[Array[Tile]] = {
         remainingTiles match {
-// use less in fact
-//          case _ if !geoMapIsValid(geoAccu, sideSize) =>
-//            None
           case Nil =>
             buildCheckSquare(geoAccu, sideSize)
           case current :: tail if geoAccu.isEmpty =>
             val id = current.id
-            val possibleBorders = current.possibleBordersFor
+            val possibleBorders = current.possibleBordersFor.to(Iterator)
             val results = possibleBorders.flatMap { border =>
               worker(tail, Map((0, 0) -> Tile(id, border)))
             }
-            results.headOption
+            if (results.hasNext) Some(results.next) else None
           case current :: tail =>
             val possibleBorders = current.possibleBordersFor
-            val attachables: LazyList[((Int, Int), Tile)] =
+            val attachables =
               for {
-                ((x, y), _) <- geoAccu.to(LazyList)          // check already attached coords
+                ((x, y), _) <- geoAccu.to(Iterator)          // check already attached coords
                 (nx, ny) <- aroundsOf(x, y)                  // positions candidates
                 if !geoAccu.contains((nx, ny))               // check if position candidate is free
                 arounds = aroundsOf(nx, ny)                  // positions around current candidate
@@ -184,12 +170,9 @@ object PuzzleDay20 {
             val results = attachables.flatMap { attachable =>
               worker(tail, geoAccu + attachable)
             }
-
-            results.headOption match {
-              case None => worker(tail:+current, geoAccu)
-              case x => x
-            }
-
+            if (results.hasNext) {
+              Some(results.next())
+            } else worker(tail:+current, geoAccu)
         }
       }
 
