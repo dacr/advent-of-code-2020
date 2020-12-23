@@ -20,6 +20,7 @@ object PuzzleDay20 {
   type Cells = List[Int]
   type Tiles = List[Tile]
   type TileId = Long
+  type Connector = Int
 
   def pow2(p: Int): Int = (1 << p)
 
@@ -80,7 +81,7 @@ object PuzzleDay20 {
 
 
   case class Borders(up: Int, down: Int, left: Int, right: Int, encoding: Array[String], bitCounts: Int = 10) {
-    def connectors = Set(up, down, left, right)
+    def connectors:Set[Connector] = Set(up, down, left, right)
   }
 
   def possibleBordersFrom(borders: Borders): List[Borders] = List(
@@ -93,7 +94,7 @@ object PuzzleDay20 {
   )
 
   case class Tile(id: TileId, borders: Borders) {
-    def connectors: Set[Int] = possibleBordersFrom(borders).flatMap(_.connectors).toSet
+    def connectors: Set[Connector] = possibleBordersFrom(borders).flatMap(_.connectors).toSet
   }
 
   def parseTile(input: String, bitCounts: Int = 10): Tile = {
@@ -152,28 +153,46 @@ object PuzzleDay20 {
 
       val tiles = parse(input)
 
-      val tilesByConnector: Map[Int, List[Tile]] =
+      val tilesByConnector: Map[Connector, List[Tile]] =
         tiles
           .flatMap(t => t.connectors.map(connector => connector -> t))
           .groupMap { case (connector, _) => connector } { case (_, tile) => tile }
 
-      val tilesConnections: Seq[(Tile, Set[TileId])] =
+      val tilesConnections: Map[TileId, Set[(TileId,Connector)]] =
         tiles.map { tile =>
-          tile -> (tile.connectors.flatMap(connector => tilesByConnector.getOrElse(connector, Nil)).map(_.id) - tile.id)
-        }
+          val tileConnections = for {
+            connector <- tile.connectors
+            connectedTiles = tilesByConnector(connector)
+            connectedTile <- connectedTiles
+            if connectedTile.id != tile.id
+          }  yield (connectedTile.id, connector)
+          tile.id -> tileConnections
+        }.toMap
+
+      tilesConnections.map{case (k,l)=> k->l.toList.sortBy{case ( tileId, connector)=> tileId}}.foreach(println)
+      println("---------------------------")
 
       val tilesUsedBorders =
         tiles.map { tile =>
-          val connectors =  tile.connectors.flatMap{connector =>
-            tilesByConnector
-              .getOrElse(connector,Nil)
-              .filterNot(_.id == tile.id)
-              .map(tile => connector ->tile.id)
+          val otherTilesPossibleConnections: Map[TileId, List[Connector]] =
+            tilesConnections
+              .getOrElse(tile.id,Nil)
+              .groupMap{case (otherTileId, connector) => otherTileId}{case (otherTileId, connector)=> connector}
+              .view
+              .mapValues(_.toList)
+              .toMap
+
+          val candidates = possibleBordersFrom(tile.borders).filter{borders =>
+            otherTilesPossibleConnections.forall{case (otherTileId, otherConnectors) =>
+              otherConnectors.exists(connector => otherConnectors.contains(connector))
+            }
           }
-          val borders =
-            possibleBordersFrom(tile.borders)
-              .maxBy(b => b.connectors.intersect(connectors.map{case (connector, _) => connector}).size)
-          println(tile.id+"\n"+borders.encoding.mkString("\n"))
+
+          println("******",tile.id, "******")
+          println(candidates.size)
+          //candidates.map(_.encoding).map(_.mkString("","\n","\n")).foreach(println)
+          candidates.map(b => s"${b.up} ${b.down} ${b.left} ${b.right}").foreach(println)
+
         }
 
       ???
@@ -226,7 +245,7 @@ class PuzzleDay20Test extends AnyFlatSpec with should.Matchers with Helpers {
   }
   // ------------------------------------------------------------------------------------
 
-  "puzzle star#2 example" should "give the right result on the example" ignore {
+  "puzzle star#2 example" should "give the right result on the example" in {
     import PuzzleDay20.Part2._
     solve(resourceContent("day20/input-example-1.txt")) shouldBe 273
   }
