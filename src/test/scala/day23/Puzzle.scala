@@ -65,12 +65,11 @@ object PuzzleDay23 {
       val givenCups     = input.trim.split("").map(_.toInt).to(Array)
       val cups          = (givenCups++:10.to(maxCup))
       val forwardLinks  = cups.sliding(2,1).map{case IndexedSeq(from,to)=>from->to}.toMap+(cups.last->cups.head)
-      val backwardLinks = cups.sliding(2,1).map{case IndexedSeq(from,to)=>to->from}.toMap+(cups.head->cups.last)
       val startCup      = cups.head
 
       @tailrec
-      def play(currentCup:Cup, remainingMoves:Int, forwards:Links, backwards:Links):(Links,Links) = {
-        if (remainingMoves==0) (forwards,backwards) else {
+      def play(currentCup:Cup, remainingMoves:Int, forwards:Links):Links = {
+        if (remainingMoves==0) forwards else {
           val forward1 = forwards(currentCup)
           val forward2 = forwards(forwards(currentCup))
           val forward3 = forwards(forwards(forwards(currentCup)))
@@ -88,18 +87,13 @@ object PuzzleDay23 {
               .updated(currentCup, forwards(forward3))
               .updated(nextCup, forward1)
               .updated(forward3, forwards(nextCup))
-          val newBackwardLinks =
-            backwards
-              .updated(forwards(forward3),currentCup)
-              .updated(forward1, nextCup)
-              .updated(forwards(nextCup), forward3)
-          play(newForwardLinks(currentCup), remainingMoves-1, newForwardLinks, newBackwardLinks)
+          play(newForwardLinks(currentCup), remainingMoves-1, newForwardLinks)
         }
       }
-      val (lastForwardLinks, lastBackwardLinks) = play(startCup, moves, forwardLinks, backwardLinks)
+      val lastForwardLinks = play(startCup, moves, forwardLinks)
       val f1 = lastForwardLinks(1)
       val f2 = lastForwardLinks(f1)
-      f1*f2
+      f1.toLong*f2
     }
 
   }
@@ -136,6 +130,6 @@ class PuzzleDay23Test extends AnyFlatSpec with should.Matchers with Helpers {
   it should "give the right result on the input file" in {
     import PuzzleDay23.Part2._
     solve("389547612") should not be 3999944L
-    solve("389547612") shouldBe 0L
+    solve("389547612") shouldBe 836763710L
   }
 }
