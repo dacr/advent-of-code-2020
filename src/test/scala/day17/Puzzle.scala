@@ -168,6 +168,103 @@ object PuzzleDay17 {
 
   }
 
+
+
+ // =================================================================================
+/*
+  object PartN { // extra part to manage N dimensions
+
+    case class Coord(parts:Vector[Int]) {
+      def add(that: Coord): Coord = Coord(parts.zip(that.parts).map{case (a,b) => a+b})
+    }
+
+    // TODO - add snippet
+    def adjacents(n:Int): Iterable[Coord] = {
+      val (start,end) = (-1, 1)
+      def worker(parts: Vector[Int], pos: Int): LazyList[Vector[Int]] = {
+        parts(pos) match {
+          case x if x == end && pos == parts.size-1 =>
+            LazyList(parts)
+          case x if x < end =>
+            parts #:: worker(parts.updated(pos, x+1), 0)
+          case x =>
+            worker(parts.updated(pos,start), pos+1)
+        }
+      }
+      val from = Vector.fill(n)(start)
+      worker(from, 0).filterNot(_.forall(_==0)).map(Coord)
+    }
+
+
+
+    val InactiveCube = '.'
+    val ActiveCube = '#'
+
+    type Board = Map[Coord, Char]
+
+    def buildBoard(input: String, n:Int): Board = {
+      val cubes = for {
+        (row, y) <- input.split("\n").zipWithIndex
+        (col, x) <- row.toCharArray.zipWithIndex
+        parts = x::y::List.fill[Int](n-2)(0)
+      } yield {
+        Coord( parts.to(Vector)) -> col
+      }
+      cubes.toMap
+    }
+
+    def boardTestCoords(board: Board): Iterable[Coord] = {
+      val minX = board.keys.minBy(_.x).x
+      val maxX = board.keys.maxBy(_.x).x
+      val minY = board.keys.minBy(_.y).y
+      val maxY = board.keys.maxBy(_.y).y
+      val minZ = board.keys.minBy(_.z).z
+      val maxZ = board.keys.maxBy(_.z).z
+      val minW = board.keys.minBy(_.w).w
+      val maxW = board.keys.maxBy(_.w).w
+      val coords = for {
+        w <- minW - 1 to maxW + 1
+        z <- minZ - 1 to maxZ + 1
+        y <- minY - 1 to maxY + 1
+        x <- minX - 1 to maxX + 1
+      } yield Coord(x, y, z, w)
+      coords
+    }
+
+
+    def solve(input: String): Int = {
+      val initialBoard = buildBoard(input)
+
+      @tailrec
+      def worker(board: Board, round: Int): Board = {
+        if (round == 6) board
+        else {
+          val newBoard =
+            boardTestCoords(board).map { coord =>
+              val cube = board.getOrElse(coord, InactiveCube)
+              val activeAdjacents = adjacents.count(c => board.getOrElse(coord.add(c), InactiveCube) == ActiveCube)
+              cube match {
+                case ActiveCube =>
+                  val state = if (activeAdjacents == 2 || activeAdjacents == 3) ActiveCube else InactiveCube
+                  coord -> state
+                case InactiveCube =>
+                  val state = if (activeAdjacents == 3) ActiveCube else InactiveCube
+                  coord -> state
+              }
+            }
+          worker(newBoard.toMap, round + 1)
+        }
+      }
+
+      val lastBoard = worker(initialBoard, 0)
+      lastBoard.values.count(_ == ActiveCube)
+    }
+
+  }
+
+*/
+
+
 }
 
 // =====================================================================================
