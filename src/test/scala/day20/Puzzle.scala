@@ -220,13 +220,13 @@ object PuzzleDay20 {
       println("************ rebuild **************")
 
       def buildBoard(remainingPositions: List[(Int, Int)], availableTileIds: Set[TileId], currentBoard: Map[(Int, Int), Borders]): Option[Map[(Int, Int), Borders]] = {
-        println(remainingPositions.head, availableTileIds.size, currentBoard.size)
+        println(remainingPositions.headOption, availableTileIds.size, currentBoard.size)
         remainingPositions match {
           case Nil => Some(currentBoard)
           // --------------------------------------------------------
           case (pos@(0, 0)) :: others =>
             val result = for {
-              tileId <- cornersTileId.toList
+              tileId <- cornersTileId
               tile <- tilesById.get(tileId).toList
               inUseConnectors <- tilesUsedConnectors.get(tileId).toList
               borders <- possibleBordersFrom(tile.borders)
@@ -264,8 +264,8 @@ object PuzzleDay20 {
               upBorders <- currentBoard.get(x, y - 1).toList
               leftBorders <- currentBoard.get(x - 1, y).toList
               borders <- possibleBordersFrom(tile.borders)
-              if borders.left == leftBorders.right
               if borders.up == upBorders.down
+              if borders.left == leftBorders.right
               foundBoard <- buildBoard(others, availableTileIds - tileId, currentBoard + (pos -> borders))
             } yield foundBoard
             result.headOption
