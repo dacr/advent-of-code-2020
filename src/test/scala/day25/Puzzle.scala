@@ -12,40 +12,41 @@ import scala.collection.immutable.Queue
 
 
 object PuzzleDay25 {
-  // =============================================================================
+
+  type SubjectNumber=Long
+  type LoopSize=Int
+
+  def handshake(subjectNumber:SubjectNumber, loopSize:LoopSize):Long = {
+    @tailrec
+    def loop(value:Long, remainLoop:LoopSize):Long = {
+      if (remainLoop==0L) value
+      else loop((value * subjectNumber) % 20201227L, remainLoop - 1)
+    }
+    loop(1L, loopSize)
+  }
+
+  def searchLoopSize(subjectNumber:SubjectNumber):LoopSize = {
+    // -----------------------
+    //Iterator
+    //  .iterate(1)(_ + 1)
+    //  .find(loopSize => handshake(7L,loopSize) == subjectNumber)
+    //  .head
+    // -----------------------
+    //var loopSize=2
+    //while(handshake(7L,loopSize)!=subjectNumber) loopSize+=1
+    //loopSize
+    // -----------------------
+    @tailrec
+    def loop(value:Long, currentLoopSize:LoopSize):LoopSize = {
+      if (value==subjectNumber) currentLoopSize
+      else loop((value * 7L) % 20201227L, currentLoopSize + 1)
+    }
+    loop(1L, 0)
+  }
+
+
 
   object Part1 {
-
-    type SubjectNumber=Long
-    type LoopSize=Int
-
-    def handshake(subjectNumber:SubjectNumber, loopSize:LoopSize):Long = {
-      @tailrec
-      def loop(value:Long, remainLoop:LoopSize):Long = {
-        if (remainLoop==0L) value
-        else loop((value * subjectNumber) % 20201227L, remainLoop - 1)
-      }
-      loop(1L, loopSize)
-    }
-
-    def searchLoopSize(subjectNumber:SubjectNumber):LoopSize = {
-      // -----------------------
-      //Iterator
-      //  .iterate(1)(_ + 1)
-      //  .find(loopSize => handshake(7L,loopSize) == subjectNumber)
-      //  .head
-      // -----------------------
-      //var loopSize=2
-      //while(handshake(7L,loopSize)!=subjectNumber) loopSize+=1
-      //loopSize
-      // -----------------------
-      @tailrec
-      def loop(value:Long, currentLoopSize:LoopSize):LoopSize = {
-        if (value==subjectNumber) currentLoopSize
-        else loop((value * 7L) % 20201227L, currentLoopSize + 1)
-      }
-      loop(1L, 0)
-    }
 
     def solve(cardPublicKey:Long, doorPublicKey:Long): Long = {
       //val cardLoopSize = searchLoopSize(cardPublicKey)
@@ -71,6 +72,7 @@ object PuzzleDay25 {
 
 class PuzzleDay25Test extends AnyFlatSpec with should.Matchers with Helpers {
 
+  import PuzzleDay25._
   // ------------------------------------------------------------------------------------
 
   "puzzle star#1 example" should "give the right result on the example" in {
