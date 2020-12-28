@@ -81,8 +81,7 @@ object PuzzleDay20 {
 
   def rotR(borders: Borders) = {
     Borders(
-      up = flipBits(borders.left,
-        borders.bitCounts),
+      up = flipBits(borders.left,borders.bitCounts),
       down = flipBits(borders.right, borders.bitCounts),
       left = borders.down,
       right = borders.up,
@@ -221,13 +220,13 @@ object PuzzleDay20 {
       println("************ rebuild **************")
 
       def buildBoard(remainingPositions: List[(Int, Int)], availableTileIds: Set[TileId], currentBoard: Map[(Int, Int), Borders]): Option[Map[(Int, Int), Borders]] = {
-        println(remainingPositions.head, availableTileIds.size)
+        println(remainingPositions.head, availableTileIds.size, currentBoard.size)
         remainingPositions match {
           case Nil => Some(currentBoard)
           // --------------------------------------------------------
           case (pos@(0, 0)) :: others =>
             val result = for {
-              tileId <- cornersTileId
+              tileId <- cornersTileId.toList
               tile <- tilesById.get(tileId).toList
               inUseConnectors <- tilesUsedConnectors.get(tileId).toList
               borders <- possibleBordersFrom(tile.borders)
