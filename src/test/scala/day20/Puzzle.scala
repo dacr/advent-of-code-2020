@@ -212,6 +212,7 @@ object PuzzleDay20 {
 
       println("************ rebuild **************")
       var board = Map.empty[(Int, Int), Borders]
+      var availableTileIds = tilesConnections.keys.toSet
       for {
         x <- 0 until size
         y <- 0 until size
@@ -220,42 +221,46 @@ object PuzzleDay20 {
         pos match {
           case (0, 0) =>
             for {
-              cornerTileId <- cornersTileId
-              tile <- tilesById.get(cornerTileId)
-              inUseConnectors <- tilesUsedConnectors.get(cornerTileId)
+              tileId <- cornersTileId
+              tile <- tilesById.get(tileId)
+              inUseConnectors <- tilesUsedConnectors.get(tileId)
               borders <- possibleBordersFrom(tile.borders)
               if !board.contains(pos)
-              if inUseConnectors.contains(borders.down) && inUseConnectors.contains(borders.right)
+              if inUseConnectors.contains(borders.down) &&
+                inUseConnectors.contains(borders.right)
             } {
               println(pos -> borders)
+              availableTileIds -= tileId
               board += pos -> borders
             }
           case (0, _) =>
             for {
-              cornerTileId <- cornersTileId
-              tile <- tilesById.get(cornerTileId)
+              tileId <- availableTileIds
+              tile <- tilesById.get(tileId)
               upBorders <- board.get(x, y - 1)
               borders <- possibleBordersFrom(tile.borders)
               if borders.up == upBorders.down
             } {
               println(pos -> borders)
+              availableTileIds -= tileId
               board += pos -> borders
             }
           case (_, 0) =>
             for {
-              cornerTileId <- cornersTileId
-              tile <- tilesById.get(cornerTileId)
+              tileId <- availableTileIds
+              tile <- tilesById.get(tileId)
               leftBorders <- board.get(x - 1, y)
               borders <- possibleBordersFrom(tile.borders)
               if borders.left == leftBorders.right
             } {
               println(pos -> borders)
+              availableTileIds -= tileId
               board += pos -> borders
             }
           case (_, _) =>
             for {
-              cornerTileId <- cornersTileId
-              tile <- tilesById.get(cornerTileId)
+              tileId <- availableTileIds
+              tile <- tilesById.get(tileId)
               upBorders <- board.get(x, y - 1)
               leftBorders <- board.get(x - 1, y)
               borders <- possibleBordersFrom(tile.borders)
@@ -263,6 +268,7 @@ object PuzzleDay20 {
               if borders.up == upBorders.down
             } {
               println(pos -> borders)
+              availableTileIds -= tileId
               board += pos -> borders
             }
         }
@@ -272,8 +278,8 @@ object PuzzleDay20 {
         (0 until size).flatMap( y =>
           (0 until size)
             .map(x => board(x, y).encoding)
-            .reduce[Array[String]] { case (a0, a1) => a0.zip(a1).map { case (l0, l1) => l0.init.tail + l1.init.tail } }
-            .init.tail
+            .map(a => a.map(_.tail.init).tail.init)
+            .reduceLeft[Array[String]] { case (a0, a1) => a0.zip(a1).map { case (l0, l1) => l0 + l1 } }
         )
 
       println(encoding.mkString("\n"))
