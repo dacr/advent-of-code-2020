@@ -67,6 +67,18 @@ object PuzzleDay20 {
     worker(from, Array.empty)
   }
 
+
+  def rotateEncodingRight(from: IndexedSeq[String]): IndexedSeq[String] = {
+    def worker(remaining: IndexedSeq[String], accu: IndexedSeq[String]): IndexedSeq[String] = {
+      if (remaining.head.isEmpty) accu else {
+        worker(remaining.map(_.tail), accu :+ remaining.map(_.head).mkString.reverse)
+      }
+    }
+
+    worker(from, IndexedSeq.empty)
+  }
+
+
   def rotR(borders: Borders) = {
     Borders(
       up = flipBits(borders.left,
@@ -91,8 +103,8 @@ object PuzzleDay20 {
     hflip(borders),
     vflip(borders),
     rotR(borders),
+    rotR(rotR(borders)),
     rotR(rotR(rotR(borders))),
-    rotR(rotR(borders))
   )
 
   case class Tile(id: TileId, borders: Borders) {
@@ -148,10 +160,6 @@ object PuzzleDay20 {
 
   object Part2 {
     def solve(input: String): Long = {
-      val seaMonster =
-        """                  #
-          |#    ##    ##    ###
-          | #  #  #  #  #  #   """.stripMargin
 
       val tiles = parse(input)
       val size = sqrt(tiles.size).toInt
@@ -211,71 +219,65 @@ object PuzzleDay20 {
       println(cornersTileId.mkString(" "))
 
       println("************ rebuild **************")
-      var board = Map.empty[(Int, Int), Borders]
-      var availableTileIds = tilesConnections.keys.toSet
-      for {
-        x <- 0 until size
-        y <- 0 until size
-        pos = (x, y)
-      } {
-        pos match {
-          case (0, 0) =>
-            for {
+
+      def buildBoard(remainingPositions: List[(Int, Int)], availableTileIds: Set[TileId], currentBoard: Map[(Int, Int), Borders]): Option[Map[(Int, Int), Borders]] = {
+        println(remainingPositions.head, availableTileIds.size)
+        remainingPositions match {
+          case Nil => Some(currentBoard)
+          // --------------------------------------------------------
+          case (pos@(0, 0)) :: others =>
+            val result = for {
               tileId <- cornersTileId
-              tile <- tilesById.get(tileId)
-              inUseConnectors <- tilesUsedConnectors.get(tileId)
+              tile <- tilesById.get(tileId).toList
+              inUseConnectors <- tilesUsedConnectors.get(tileId).toList
               borders <- possibleBordersFrom(tile.borders)
-              if !board.contains(pos)
-              if inUseConnectors.contains(borders.down) &&
-                inUseConnectors.contains(borders.right)
-            } {
-              println(pos -> borders)
-              availableTileIds -= tileId
-              board += pos -> borders
-            }
-          case (0, _) =>
-            for {
+              if inUseConnectors.contains(borders.down) && inUseConnectors.contains(borders.right)
+              foundBoard <- buildBoard(others, availableTileIds - tileId, currentBoard + (pos -> borders))
+            } yield foundBoard
+            result.headOption
+          // --------------------------------------------------------
+          case (pos@(0, y)) :: others =>
+            val result = for {
               tileId <- availableTileIds
-              tile <- tilesById.get(tileId)
-              upBorders <- board.get(x, y - 1)
+              tile <- tilesById.get(tileId).toList
+              upBorders <- currentBoard.get(0, y - 1).toList
               borders <- possibleBordersFrom(tile.borders)
               if borders.up == upBorders.down
-            } {
-              println(pos -> borders)
-              availableTileIds -= tileId
-              board += pos -> borders
-            }
-          case (_, 0) =>
-            for {
+              foundBoard <- buildBoard(others, availableTileIds - tileId, currentBoard + (pos -> borders))
+            } yield foundBoard
+            result.headOption
+          // --------------------------------------------------------
+          case (pos@(x, 0)) :: others =>
+            val result = for {
               tileId <- availableTileIds
-              tile <- tilesById.get(tileId)
-              leftBorders <- board.get(x - 1, y)
+              tile <- tilesById.get(tileId).toList
+              leftBorders <- currentBoard.get(x - 1, 0).toList
               borders <- possibleBordersFrom(tile.borders)
               if borders.left == leftBorders.right
-            } {
-              println(pos -> borders)
-              availableTileIds -= tileId
-              board += pos -> borders
-            }
-          case (_, _) =>
-            for {
+              foundBoard <- buildBoard(others, availableTileIds - tileId, currentBoard + (pos -> borders))
+            } yield foundBoard
+            result.headOption
+          // --------------------------------------------------------
+          case (pos@(x, y)) :: others =>
+            val result = for {
               tileId <- availableTileIds
-              tile <- tilesById.get(tileId)
-              upBorders <- board.get(x, y - 1)
-              leftBorders <- board.get(x - 1, y)
+              tile <- tilesById.get(tileId).toList
+              upBorders <- currentBoard.get(x, y - 1).toList
+              leftBorders <- currentBoard.get(x - 1, y).toList
               borders <- possibleBordersFrom(tile.borders)
               if borders.left == leftBorders.right
               if borders.up == upBorders.down
-            } {
-              println(pos -> borders)
-              availableTileIds -= tileId
-              board += pos -> borders
-            }
+              foundBoard <- buildBoard(others, availableTileIds - tileId, currentBoard + (pos -> borders))
+            } yield foundBoard
+            result.headOption
         }
       }
 
+      val positions = (0 until size).flatMap(y => (0 until size).map(x => (x, y))).toList
+      val board = buildBoard(positions, tilesConnections.keys.toSet, Map.empty).get
+
       val encoding =
-        (0 until size).flatMap( y =>
+        (0 until size).flatMap(y =>
           (0 until size)
             .map(x => board(x, y).encoding)
             .map(a => a.map(_.tail.init).tail.init)
@@ -285,10 +287,39 @@ object PuzzleDay20 {
       println(encoding.mkString("\n"))
 
 
-    ???
-  }
+      val seaMonster =
+        """__________________#_
+          |#____##____##____###
+          |_#__#__#__#__#__#___""".stripMargin.replaceAll("_", " ").split("\n").toIndexedSeq
 
-}
+      val seaMonsterRelativeCoords =
+        seaMonster.zipWithIndex.flatMap { case (row, y) => row.zipWithIndex.collect { case (cell, x) if cell == '#' => (x, y) } }
+
+      val sea = encoding
+      val seas = List(
+        sea,
+        sea.reverse,
+        sea.map(_.reverse),
+        rotateEncodingRight(sea),
+        rotateEncodingRight(rotateEncodingRight(sea)),
+        rotateEncodingRight(rotateEncodingRight(rotateEncodingRight(sea))),
+      )
+
+      def countMonster(sea: IndexedSeq[String], monster: IndexedSeq[(Int, Int)]): Int = {
+        val result = for {
+          x <- 0 until sea.head.size - monster.map { case (x, y) => x }.max
+          y <- 0 until sea.size - monster.map { case (x, y) => y }.max
+          if monster.forall { case (dx, dy) => sea(y + dy).charAt(x + dx) == '#' }
+        } yield 1
+        result.sum
+      }
+
+      val seaMonsterCount = seas.map(sea => countMonster(sea, seaMonsterRelativeCoords)).max
+
+      sea.map(_.count(_ == '#')).sum - seaMonster.map(_.count(_ == '#')).sum * seaMonsterCount
+    }
+
+  }
 
 }
 
@@ -340,7 +371,7 @@ class PuzzleDay20Test extends AnyFlatSpec with should.Matchers with Helpers {
     import PuzzleDay20.Part2._
     solve(resourceContent("day20/input-example-1.txt")) shouldBe 273
   }
-  it should "give the right result on the input file" ignore {
+  it should "give the right result on the input file" in {
     import PuzzleDay20.Part2._
     solve(resourceContent("day20/input-given-1.txt")) shouldBe -1
   }
