@@ -82,6 +82,7 @@ object PuzzleDay20 {
 
   case class Borders(up: Int, down: Int, left: Int, right: Int, encoding: Array[String], bitCounts: Int = 10) {
     def connectors:Set[Connector] = Set(up, down, left, right)
+    def id = up.toLong*7+down*11+left*13+right*17
   }
 
   def possibleBordersFrom(borders: Borders): List[Borders] = List(
@@ -152,6 +153,8 @@ object PuzzleDay20 {
           | #  #  #  #  #  #   """.stripMargin
 
       val tiles = parse(input)
+      val size = sqrt(tiles.size).toInt
+      val tilesById = tiles.map(tile => tile.id -> tile).toMap
 
       val tilesByConnector: Map[Connector, List[Tile]] =
         tiles
@@ -191,10 +194,45 @@ object PuzzleDay20 {
           println("******",tile.id, "******")
           println(candidates.size)
           //candidates.map(_.encoding).map(_.mkString("","\n","\n")).foreach(println)
-          candidates.map(b => s"${b.up} ${b.down} ${b.left} ${b.right}").foreach(println)
-
+          candidates.map(b => s"${b.up} ${b.down} ${b.left} ${b.right} => ${b.id}").foreach(println)
         }
 
+      val tilesUsedConnectors =
+        tilesConnections
+          .map{ case (tileId, connections) => tileId -> connections.map{case (id, cnx) =>  cnx }}
+
+      val cornersTileId =
+        tilesConnections
+          .map{ case (tileId, connections) => tileId -> connections.map{case (id, cnx) =>  id }}
+          .collect { case (tileId, connectedTileIds) if connectedTileIds.size == 2 => tileId }
+
+      println("************ corners **************")
+      println(cornersTileId.mkString(" "))
+
+      println("************ rebuild **************")
+      var board = Map.empty[(Int,Int),Borders]
+      for {
+        x <- 0 until size
+        y <- 0 until size
+      } {
+        (x,y) match {
+          case (0,0)=>
+            for {
+              cornerTileId <- cornersTileId
+              tile <- tilesById.get(cornerTileId)
+              inUseConnectors <- tilesUsedConnectors.get(cornerTileId)
+              borders <- possibleBordersFrom(tile.borders)
+              if inUseConnectors.contains(borders.down) && inUseConnectors.contains(borders.right)
+            } {
+              println((x,y),borders)
+              board += (x,y) -> borders
+            }
+
+          case (0,_)=>
+          case (_,0)=>
+          case (_,_)=>
+        }
+      }
       ???
     }
   }
