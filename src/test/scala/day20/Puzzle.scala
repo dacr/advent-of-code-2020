@@ -81,8 +81,9 @@ object PuzzleDay20 {
 
 
   case class Borders(up: Int, down: Int, left: Int, right: Int, encoding: Array[String], bitCounts: Int = 10) {
-    def connectors:Set[Connector] = Set(up, down, left, right)
-    def id = up.toLong*7+down*11+left*13+right*17
+    def connectors: Set[Connector] = Set(up, down, left, right)
+
+    def id = up.toLong * 7 + down * 11 + left * 13 + right * 17
   }
 
   def possibleBordersFrom(borders: Borders): List[Borders] = List(
@@ -161,37 +162,37 @@ object PuzzleDay20 {
           .flatMap(t => t.connectors.map(connector => connector -> t))
           .groupMap { case (connector, _) => connector } { case (_, tile) => tile }
 
-      val tilesConnections: Map[TileId, Set[(TileId,Connector)]] =
+      val tilesConnections: Map[TileId, Set[(TileId, Connector)]] =
         tiles.map { tile =>
           val tileConnections = for {
             connector <- tile.connectors
             connectedTiles = tilesByConnector(connector)
             connectedTile <- connectedTiles
             if connectedTile.id != tile.id
-          }  yield (connectedTile.id, connector)
+          } yield (connectedTile.id, connector)
           tile.id -> tileConnections
         }.toMap
 
-      tilesConnections.map{case (k,l)=> k->l.toList.sortBy{case ( tileId, connector)=> tileId}}.foreach(println)
+      tilesConnections.map { case (k, l) => k -> l.toList.sortBy { case (tileId, connector) => tileId } }.foreach(println)
       println("---------------------------")
 
       val tilesUsedBorders =
         tiles.map { tile =>
           val otherTilesPossibleConnections: Map[TileId, List[Connector]] =
             tilesConnections
-              .getOrElse(tile.id,Nil)
-              .groupMap{case (otherTileId, connector) => otherTileId}{case (otherTileId, connector)=> connector}
+              .getOrElse(tile.id, Nil)
+              .groupMap { case (otherTileId, connector) => otherTileId } { case (otherTileId, connector) => connector }
               .view
               .mapValues(_.toList)
               .toMap
 
-          val candidates = possibleBordersFrom(tile.borders).filter{borders =>
-            otherTilesPossibleConnections.forall{case (otherTileId, otherConnectors) =>
+          val candidates = possibleBordersFrom(tile.borders).filter { borders =>
+            otherTilesPossibleConnections.forall { case (otherTileId, otherConnectors) =>
               otherConnectors.exists(connector => otherConnectors.contains(connector))
             }
           }
 
-          println("******",tile.id, "******")
+          println("******", tile.id, "******")
           println(candidates.size)
           //candidates.map(_.encoding).map(_.mkString("","\n","\n")).foreach(println)
           candidates.map(b => s"${b.up} ${b.down} ${b.left} ${b.right} => ${b.id}").foreach(println)
@@ -199,43 +200,89 @@ object PuzzleDay20 {
 
       val tilesUsedConnectors =
         tilesConnections
-          .map{ case (tileId, connections) => tileId -> connections.map{case (id, cnx) =>  cnx }}
+          .map { case (tileId, connections) => tileId -> connections.map { case (id, cnx) => cnx } }
 
       val cornersTileId =
         tilesConnections
-          .map{ case (tileId, connections) => tileId -> connections.map{case (id, cnx) =>  id }}
+          .map { case (tileId, connections) => tileId -> connections.map { case (id, cnx) => id } }
           .collect { case (tileId, connectedTileIds) if connectedTileIds.size == 2 => tileId }
 
       println("************ corners **************")
       println(cornersTileId.mkString(" "))
 
       println("************ rebuild **************")
-      var board = Map.empty[(Int,Int),Borders]
+      var board = Map.empty[(Int, Int), Borders]
       for {
         x <- 0 until size
         y <- 0 until size
+        pos = (x, y)
       } {
-        (x,y) match {
-          case (0,0)=>
+        pos match {
+          case (0, 0) =>
             for {
               cornerTileId <- cornersTileId
               tile <- tilesById.get(cornerTileId)
               inUseConnectors <- tilesUsedConnectors.get(cornerTileId)
               borders <- possibleBordersFrom(tile.borders)
+              if !board.contains(pos)
               if inUseConnectors.contains(borders.down) && inUseConnectors.contains(borders.right)
             } {
-              println((x,y),borders)
-              board += (x,y) -> borders
+              println(pos -> borders)
+              board += pos -> borders
             }
-
-          case (0,_)=>
-          case (_,0)=>
-          case (_,_)=>
+          case (0, _) =>
+            for {
+              cornerTileId <- cornersTileId
+              tile <- tilesById.get(cornerTileId)
+              upBorders <- board.get(x, y - 1)
+              borders <- possibleBordersFrom(tile.borders)
+              if borders.up == upBorders.down
+            } {
+              println(pos -> borders)
+              board += pos -> borders
+            }
+          case (_, 0) =>
+            for {
+              cornerTileId <- cornersTileId
+              tile <- tilesById.get(cornerTileId)
+              leftBorders <- board.get(x - 1, y)
+              borders <- possibleBordersFrom(tile.borders)
+              if borders.left == leftBorders.right
+            } {
+              println(pos -> borders)
+              board += pos -> borders
+            }
+          case (_, _) =>
+            for {
+              cornerTileId <- cornersTileId
+              tile <- tilesById.get(cornerTileId)
+              upBorders <- board.get(x, y - 1)
+              leftBorders <- board.get(x - 1, y)
+              borders <- possibleBordersFrom(tile.borders)
+              if borders.left == leftBorders.right
+              if borders.up == upBorders.down
+            } {
+              println(pos -> borders)
+              board += pos -> borders
+            }
         }
       }
-      ???
-    }
+
+      val encoding =
+        (0 until size).flatMap( y =>
+          (0 until size)
+            .map(x => board(x, y).encoding)
+            .reduce[Array[String]] { case (a0, a1) => a0.zip(a1).map { case (l0, l1) => l0.init.tail + l1.init.tail } }
+            .init.tail
+        )
+
+      println(encoding.mkString("\n"))
+
+
+    ???
   }
+
+}
 
 }
 
